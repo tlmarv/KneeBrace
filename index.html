@@ -1,1408 +1,1044 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KneeBrace-Eval — Sports Knee Brace Donning & Fit Accuracy Platform</title>
-  <!-- Tailwind CSS -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BraceFit Audit | Multi-Rater Orthopaedic Brace Evaluation</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            clinical: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0284c7',
-              600: '#0369a1',
-              700: '#075985',
-              800: '#0c4a6e',
-              900: '#082f49',
-            }
-          }
-        }
-      }
-    }
-  </script>
   <style>
-    /* Orthopedic/Clinical viewport canvas grid */
-    .viewport-grid {
+    /* Custom scrollbar for dense clinical rubric */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    .no-select {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .checkerboard {
+      background-color: #090d16;
+      background-image:
+        linear-gradient(45deg, #111827 25%, transparent 25%),
+        linear-gradient(-45deg, #111827 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #111827 75%),
+        linear-gradient(-45deg, transparent 75%, #111827 75%);
       background-size: 24px 24px;
-      background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
     }
-    /* Radio Pill Button Active Styling */
-    .score-radio:checked + label {
-      border-color: #0284c7;
-      background-color: #0369a1;
-      color: #ffffff;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.15);
+
+    .high-contrast-filter {
+      filter: contrast(1.35) brightness(1.12);
     }
-    .score-radio-zero:checked + label {
-      border-color: #e11d48;
-      background-color: #be123c;
-      color: #ffffff;
-    }
-    .score-radio-indet:checked + label {
-      border-color: #d97706;
-      background-color: #b45309;
-      color: #ffffff;
-    }
-    /* Scrollbars */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans antialiased h-screen flex flex-col overflow-hidden selection:bg-clinical-100 selection:text-clinical-900">
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden font-sans antialiased">
 
-  <!-- ================= TOP NAVIGATION BAR ================= -->
-  <header class="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shrink-0 z-20 shadow-xs">
-    <div class="flex items-center space-x-3">
-      <div class="h-8 w-8 rounded-lg bg-clinical-700 text-white flex items-center justify-center font-bold shadow-xs">
-        <i data-lucide="crosshair" class="w-5 h-5"></i>
+  <!-- Top Navigation & Study Telemetry Bar -->
+  <header class="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-sm">
+        BF
       </div>
       <div>
-        <h1 class="text-sm font-bold text-slate-900 leading-tight">KneeBrace-Eval Protocol</h1>
-        <p class="text-[11px] text-slate-500 font-medium">Sports Knee Brace Donning & Fit Accuracy Assessment</p>
-      </div>
-    </div>
-
-    <!-- Central Progress & Blinding Bar -->
-    <div class="hidden md:flex items-center space-x-4">
-      <div class="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-md border border-slate-200 text-xs">
-        <span class="text-slate-500 font-medium">Image:</span>
-        <span id="currentImageIndexBadge" class="font-bold font-mono text-slate-800">1 / 1</span>
-        <div class="w-20 bg-slate-200 rounded-full h-1.5 overflow-hidden ml-1">
-          <div id="studyProgressBar" class="bg-clinical-600 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm font-semibold tracking-tight text-white">BraceFit Audit</h1>
+          <span id="sourceBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-medium">
+            Initializing...
+          </span>
         </div>
+        <p class="text-[11px] text-slate-400">7-Category Anatomical Donning & Fit Protocol</p>
       </div>
-      
-      <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
-        <input type="checkbox" id="blindingToggle" onchange="toggleBlindingMode()" class="rounded border-slate-300 text-clinical-600 focus:ring-clinical-500 w-3.5 h-3.5">
-        <span class="font-medium">Double-Blinded</span>
-      </label>
     </div>
 
-    <!-- Evaluator & Action Controls -->
-    <div class="flex items-center space-x-2">
-      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md text-xs">
-        <i data-lucide="user" class="w-3.5 h-3.5 text-slate-500"></i>
-        <span class="text-slate-400 text-[10px] uppercase font-bold">Rater:</span>
-        <span id="displayRaterId" class="font-mono font-bold text-slate-800">RATER_01</span>
+    <!-- Center Specimen Progress -->
+    <div class="hidden md:flex items-center gap-3">
+      <button onclick="prevSpecimen()" title="Previous Specimen (P)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition">
+        ← Prev
+      </button>
+      <div class="flex items-center gap-2 bg-slate-950 px-3 py-1 rounded-lg border border-slate-800">
+        <span class="text-xs text-slate-400">Item</span>
+        <select id="specimenJumpSelect" onchange="jumpToSpecimen(this.value)" class="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer"></select>
+        <span id="progressCounter" class="text-xs text-slate-400">/ 0</span>
+        <span id="scoredBadge" class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Unscored</span>
       </div>
+      <button onclick="nextSpecimen()" title="Next Specimen" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition">
+        Next →
+      </button>
+    </div>
 
-      <button onclick="openConfigModal()" title="Dataset & Cloud Settings" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition shadow-2xs">
-        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">Settings</span>
+    <!-- Right Controls -->
+    <div class="flex items-center gap-2">
+      <button onclick="openConfigModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-100 transition">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span id="activeRaterLabel">Rater_01 (Tanner)</span>
       </button>
 
-      <button onclick="openAppsScriptModal()" title="Google Sheets Integration Script" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 transition">
-        <i data-lucide="table" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">Backend Script</span>
+      <button onclick="openScriptModal()" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-300 transition" title="Google Sheets Real-Time Sync Setup">
+        Backend Script
       </button>
 
-      <button onclick="exportCSV()" title="Download aggregated CSV dataset" class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-md bg-clinical-700 hover:bg-clinical-800 text-white transition shadow-2xs">
-        <i data-lucide="download" class="w-3.5 h-3.5"></i>
-        <span>Export CSV</span>
-      </button>
+      <div class="relative inline-block">
+        <button onclick="exportCSV()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow-sm transition">
+          Export CSV (<span id="exportCount">0</span>)
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- Notification Toast Container -->
-  <div id="toastContainer" class="fixed top-14 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+  <!-- Main Workspace Split Screen -->
+  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
 
-  <!-- ================= MAIN WORKSPACE (SPLIT-SCREEN) ================= -->
-  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden gap-0">
-    
-    <!-- LEFT PANEL: IMAGE INSPECTION WORKSPACE (7 Cols) -->
-    <section class="lg:col-span-7 flex flex-col bg-slate-900 border-r border-slate-300 relative h-full overflow-hidden select-none">
-      
-      <!-- Viewport Header Toolbar -->
-      <div class="px-4 py-2 bg-slate-900/90 backdrop-blur-xs border-b border-slate-800 flex items-center justify-between z-10 text-xs text-slate-300">
-        <div class="flex items-center space-x-2">
-          <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Specimen:</span>
-          <span id="activeImageFilename" class="font-mono bg-slate-800 px-2 py-0.5 rounded text-white font-semibold">BRACE_001.jpg</span>
-          <span id="flagIndicatorBadge" class="hidden text-[10px] bg-rose-900/70 border border-rose-500 text-rose-200 px-1.5 py-0.5 rounded font-medium items-center gap-1">
-            <i data-lucide="flag" class="w-3 h-3 text-rose-400"></i> Consensus Review
+    <!-- Left Panel: Interactive Specimen Viewport -->
+    <section class="w-full lg:w-[52%] h-[42vh] lg:h-full flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950 relative shrink-0">
+
+      <!-- Specimen Header & Image Toolbar -->
+      <div class="h-11 bg-slate-900/80 border-b border-slate-800 px-3 flex items-center justify-between z-10 shrink-0">
+        <div class="flex items-center gap-2 truncate">
+          <span id="specimenTitle" class="text-xs font-mono font-semibold text-indigo-300 truncate">SPECIMEN_0001</span>
+          <span id="orderModeTag" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Sequential</span>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button onclick="adjustZoom(-0.25)" title="Zoom Out (-)" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700">−</button>
+          <span id="zoomReadout" class="text-[11px] font-mono text-slate-300 w-11 text-center">100%</span>
+          <button onclick="adjustZoom(0.25)" title="Zoom In (+)" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700">+</button>
+          <button onclick="resetTransform()" title="Reset View (R)" class="px-2 h-7 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-200 border border-slate-700">Reset</button>
+          <button id="contrastBtn" onclick="toggleContrast()" title="Toggle High-Contrast Strap Inspection" class="px-2 h-7 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-300 border border-slate-700">
+            Contrast
+          </button>
+        </div>
+      </div>
+
+      <!-- Pan / Zoom Canvas -->
+      <div id="viewportContainer" class="flex-1 relative overflow-hidden checkerboard cursor-grab active:cursor-grabbing no-select flex items-center justify-center">
+        <div id="transformLayer" class="transition-transform duration-75 ease-out origin-center flex items-center justify-center">
+          <img id="specimenImage" src="" alt="Knee Brace Specimen" class="max-h-[75vh] max-w-[85vw] lg:max-w-[46vw] object-contain pointer-events-none shadow-2xl rounded" />
+        </div>
+
+        <!-- Subtle Controls Hint Overlay -->
+        <div class="absolute bottom-2.5 left-3 bg-slate-900/85 backdrop-blur border border-slate-800 px-2.5 py-1 rounded text-[10px] text-slate-400 pointer-events-none">
+          Scroll to zoom • Drag to pan • <kbd class="text-slate-200">R</kbd> reset • <kbd class="text-slate-200">Enter</kbd> save & next
+        </div>
+
+        <!-- Sync Status Toast -->
+        <div id="toastBanner" class="hidden absolute top-3 right-3 bg-emerald-950/95 border border-emerald-700 text-emerald-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg">
+          Saved
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Panel: 7-Category Operational Scoring Rubric -->
+    <section class="flex-1 h-full flex flex-col bg-slate-900/40 overflow-hidden">
+
+      <!-- Sticky Live Score Summary Bar -->
+      <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-3">
+          <div>
+            <span class="text-[10px] uppercase tracking-wider text-slate-400 block">Composite Fit Score</span>
+            <div class="flex items-baseline gap-1.5">
+              <span id="liveAccurateCount" class="text-base font-bold text-white">0</span>
+              <span class="text-xs text-slate-400">/ <span id="liveEvaluableCount">0</span> evaluable (6 max)</span>
+            </div>
+          </div>
+          <span id="compositeStatusPill" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+            Incomplete
           </span>
         </div>
 
-        <div class="flex items-center gap-3 text-[11px] text-slate-400">
-          <span class="hidden sm:inline">Pan: <b>Drag</b> | Zoom: <b>Scroll</b></span>
-          <span class="hidden md:inline font-mono text-slate-500">Hotkeys: [R] Reset | [Enter] Next</span>
+        <div class="flex items-center gap-2 text-[11px]">
+          <span class="px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-mono">1 = Correct</span>
+          <span class="px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/60 font-mono">0 = Inaccurate</span>
+          <span class="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60 font-mono">9 = Indeterminate</span>
         </div>
       </div>
 
-      <!-- Canvas / Viewport Container -->
-      <div id="imageViewport" class="flex-1 relative overflow-hidden viewport-grid flex items-center justify-center cursor-grab active:cursor-grabbing">
-        
-        <!-- Empty placeholder alert -->
-        <div id="emptyNotice" class="hidden text-center text-slate-400 p-6 z-10">
-          <i data-lucide="image-off" class="w-12 h-12 mx-auto mb-2 text-slate-500"></i>
-          <p class="text-sm font-semibold">No images remaining in current batch</p>
-          <button onclick="openConfigModal()" class="mt-2 text-xs text-clinical-400 underline font-medium">Load image dataset in settings</button>
-        </div>
+      <!-- Scrollable Rubric Form -->
+      <div id="rubricScrollContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
 
-        <!-- Transformable Wrapper -->
-        <div id="imageTransformContainer" class="transform origin-center transition-transform duration-75 ease-out inline-block">
-          <img id="mainImage" src="" alt="Brace specimen" class="max-w-none max-h-[75vh] rounded shadow-2xl pointer-events-none block object-contain">
-        </div>
+        <!-- Categories 1 to 6 injected cleanly by JS -->
+        <div id="binaryCategoriesContainer" class="space-y-3"></div>
 
-        <!-- Floating Magnification HUD -->
-        <div class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur-md text-white rounded-full px-3 py-1 flex items-center gap-2 border border-slate-700 shadow-xl text-xs z-10">
-          <button onclick="adjustZoom(-0.25)" title="Zoom Out (-)" class="p-1 hover:bg-slate-800 rounded-full transition">
-            <i data-lucide="minus" class="w-3.5 h-3.5"></i>
-          </button>
-          <span id="zoomDisplay" class="font-mono text-[11px] w-12 text-center font-bold">100%</span>
-          <button onclick="adjustZoom(0.25)" title="Zoom In (+)" class="p-1 hover:bg-slate-800 rounded-full transition">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-          </button>
-          <div class="h-3 w-px bg-slate-700 mx-0.5"></div>
-          <button onclick="resetZoomPan()" title="Reset Zoom (R)" class="p-1 hover:bg-slate-800 rounded-full transition text-slate-300 hover:text-white">
-            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-          </button>
-          <button onclick="toggleInvertColors()" title="Contrast / Inversion Filter" class="p-1 hover:bg-slate-800 rounded-full transition text-slate-300 hover:text-white">
-            <i data-lucide="sun-medium" class="w-3.5 h-3.5"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Viewport Bottom Navigation Strip -->
-      <div class="px-4 py-2.5 bg-slate-900 border-t border-slate-800 flex items-center justify-between text-xs text-white z-10">
-        <div class="flex items-center gap-2">
-          <button id="prevBtn" onclick="navigateImage(-1)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed border border-slate-700 font-medium transition">
-            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i> Previous
-          </button>
-          <button id="nextBtn" onclick="navigateImage(1)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed border border-slate-700 font-medium transition">
-            Skip / Next <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-          </button>
-        </div>
-
-        <button id="btnToggleFlag" onclick="toggleConsensusFlag()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">
-          <i data-lucide="flag" class="w-3.5 h-3.5" id="flagBtnIcon"></i>
-          <span id="flagBtnText">Flag for Consensus</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- RIGHT PANEL: ORTHOPEDIC RUBRIC SCORING SUITE (5 Cols) -->
-    <section class="lg:col-span-5 bg-white flex flex-col h-full overflow-hidden shadow-lg border-l border-slate-200">
-      
-      <!-- Rubric Summary Header & Live Computed Score -->
-      <div class="px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-        <div>
-          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-600">Donning Accuracy Rubric</h2>
-          <div class="flex items-center gap-2 mt-0.5">
-            <span class="text-[11px] text-slate-500">Fit Threshold: 6/6 Mandatory</span>
-            <span id="cloudSyncStatus" class="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Synced
-            </span>
-          </div>
-        </div>
-
-        <div class="text-right">
-          <div class="flex items-baseline justify-end gap-1">
-            <span id="totalScoreNum" class="text-2xl font-black text-slate-900 font-mono">0</span>
-            <span class="text-xs text-slate-500 font-bold">/ 6</span>
-          </div>
-          <span id="passFailBadge" class="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide bg-slate-200 text-slate-600">INCOMPLETE</span>
-        </div>
-      </div>
-
-      <!-- Scrollable Form Container -->
-      <form id="rubricForm" onsubmit="event.preventDefault();" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-
-        <!-- ================= CATEGORY 1 ================= -->
-        <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-slate-300 transition">
+        <!-- Category 7: Contextual Posture & Setting Metadata -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-3">
           <div class="flex items-start justify-between gap-2">
             <div>
-              <span class="text-[10px] font-bold text-clinical-700 uppercase tracking-wider">Category 1</span>
-              <h3 class="font-bold text-slate-900 text-xs">Vertical / Axial Orientation</h3>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60">Cat 7</span>
+                <h3 class="text-sm font-semibold text-white">Contextual Posture & Setting</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">Categorical subgroup metadata (does not penalize composite accuracy score unless clinically contradictory).</p>
             </div>
-            <button type="button" onclick="toggleCriteriaHelp('helpCat1')" class="text-slate-400 hover:text-clinical-600">
-              <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-          
-          <div id="helpCat1" class="hidden my-2 p-2 bg-slate-50 rounded text-[11px] text-slate-600 border border-slate-200 space-y-1">
-            <p><strong>1 (Correct):</strong> Wider thigh frame/cuffs are proximal; narrower calf distal; hinge ROM stops/pins per design.</p>
-            <p><strong>0 (Inaccurate):</strong> Completely upside down (e.g. calf shell over thigh, condyle hinges over tibial shaft).</p>
-            <p><strong>9 (Indeterminate):</strong> Extreme zoom showing only hinge center, obscuring upper & lower cuffs.</p>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Metadata</span>
           </div>
 
-          <div class="grid grid-cols-3 gap-1.5 mt-2.5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
             <div>
-              <input type="radio" name="cat1" id="cat1_1" value="1" class="hidden score-radio" onchange="onScoreChange()">
-              <label for="cat1_1" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Correct (1)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat1" id="cat1_0" value="0" class="hidden score-radio score-radio-zero" onchange="onScoreChange()">
-              <label for="cat1_0" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Inaccurate (0)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat1" id="cat1_9" value="9" class="hidden score-radio score-radio-indet" onchange="onScoreChange()">
-              <label for="cat1_9" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Indeterminate (9)</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================= CATEGORY 2 ================= -->
-        <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-slate-300 transition">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <span class="text-[10px] font-bold text-clinical-700 uppercase tracking-wider">Category 2</span>
-              <h3 class="font-bold text-slate-900 text-xs">Joint Line / Epicondylar Center</h3>
-            </div>
-            <button type="button" onclick="toggleCriteriaHelp('helpCat2')" class="text-slate-400 hover:text-clinical-600">
-              <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-
-          <div id="helpCat2" class="hidden my-2 p-2 bg-slate-50 rounded text-[11px] text-slate-600 border border-slate-200 space-y-1">
-            <p><strong>1 (Correct):</strong> Hinge center falls within condylar zone: superior patella to tibial tubercle (≤ 1.5–2.0 cm of lateral epicondyle / joint line).</p>
-            <p><strong>0 (Inaccurate):</strong> Gross vertical migration. Hinge proximal to superior patella (mid-femur) or distal to tibial tuberosity (tibia).</p>
-            <p><strong>9 (Indeterminate):</strong> Hinge covered by clothing, extreme frontal view hiding axis, or leg cropped at knee joint.</p>
-          </div>
-
-          <div class="grid grid-cols-3 gap-1.5 mt-2.5">
-            <div>
-              <input type="radio" name="cat2" id="cat2_1" value="1" class="hidden score-radio" onchange="onScoreChange()">
-              <label for="cat2_1" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Correct (1)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat2" id="cat2_0" value="0" class="hidden score-radio score-radio-zero" onchange="onScoreChange()">
-              <label for="cat2_0" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Inaccurate (0)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat2" id="cat2_9" value="9" class="hidden score-radio score-radio-indet" onchange="onScoreChange()">
-              <label for="cat2_9" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Indeterminate (9)</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================= CATEGORY 3 ================= -->
-        <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-slate-300 transition">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <span class="text-[10px] font-bold text-clinical-700 uppercase tracking-wider">Category 3</span>
-              <h3 class="font-bold text-slate-900 text-xs">Anteroposterior (AP) Plane Position</h3>
-            </div>
-            <button type="button" onclick="toggleCriteriaHelp('helpCat3')" class="text-slate-400 hover:text-clinical-600">
-              <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-
-          <div id="helpCat3" class="hidden my-2 p-2 bg-slate-50 rounded text-[11px] text-slate-600 border border-slate-200 space-y-1">
-            <p><strong>1 (Correct):</strong> Upright struts align with mid-lateral/mid-medial line of leg (angle deviation ≤ 15° from coronal mid-axis).</p>
-            <p><strong>0 (Inaccurate):</strong> Severe rotational malalignment. Uprights visibly rotated anteriorly over quad/patella or into popliteal fossa (> 15°).</p>
-            <p><strong>9 (Indeterminate):</strong> Pure AP (direct anterior) or posterior camera view where coronal depth cannot be resolved.</p>
-          </div>
-
-          <div class="grid grid-cols-3 gap-1.5 mt-2.5">
-            <div>
-              <input type="radio" name="cat3" id="cat3_1" value="1" class="hidden score-radio" onchange="onScoreChange()">
-              <label for="cat3_1" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Correct (1)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat3" id="cat3_0" value="0" class="hidden score-radio score-radio-zero" onchange="onScoreChange()">
-              <label for="cat3_0" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Inaccurate (0)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat3" id="cat3_9" value="9" class="hidden score-radio score-radio-indet" onchange="onScoreChange()">
-              <label for="cat3_9" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Indeterminate (9)</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================= CATEGORY 4 ================= -->
-        <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-slate-300 transition">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <span class="text-[10px] font-bold text-clinical-700 uppercase tracking-wider">Category 4</span>
-              <h3 class="font-bold text-slate-900 text-xs">Patellar Alignment & Window</h3>
-            </div>
-            <button type="button" onclick="toggleCriteriaHelp('helpCat4')" class="text-slate-400 hover:text-clinical-600">
-              <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-
-          <div id="helpCat4" class="hidden my-2 p-2 bg-slate-50 rounded text-[11px] text-slate-600 border border-slate-200 space-y-1">
-            <p><strong>1 (Correct):</strong> Patella centered in cutout/buttress (≤ 1/3 overlap), or open-frame clearance arch crosses superior to patella without compression.</p>
-            <p><strong>0 (Inaccurate):</strong> Cutout rests over quad tendon, over tibial tuberosity, or patella displaced under solid cuff/neoprene.</p>
-            <p><strong>9 (Indeterminate):</strong> Pure lateral profile hiding patellar centering, or brace design lacks anterior reference window.</p>
-          </div>
-
-          <div class="grid grid-cols-3 gap-1.5 mt-2.5">
-            <div>
-              <input type="radio" name="cat4" id="cat4_1" value="1" class="hidden score-radio" onchange="onScoreChange()">
-              <label for="cat4_1" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Correct (1)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat4" id="cat4_0" value="0" class="hidden score-radio score-radio-zero" onchange="onScoreChange()">
-              <label for="cat4_0" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Inaccurate (0)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat4" id="cat4_9" value="9" class="hidden score-radio score-radio-indet" onchange="onScoreChange()">
-              <label for="cat4_9" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Indeterminate (9)</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================= CATEGORY 5 ================= -->
-        <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-slate-300 transition">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <span class="text-[10px] font-bold text-clinical-700 uppercase tracking-wider">Category 5</span>
-              <h3 class="font-bold text-slate-900 text-xs">Skin Interface vs. Layering</h3>
-            </div>
-            <button type="button" onclick="toggleCriteriaHelp('helpCat5')" class="text-slate-400 hover:text-clinical-600">
-              <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-
-          <div id="helpCat5" class="hidden my-2 p-2 bg-slate-50 rounded text-[11px] text-slate-600 border border-slate-200 space-y-1">
-            <p><strong>1 (Correct):</strong> Bare skin, under athletic short, or over single thin compression tight / medical cotton undersleeve without bunching.</p>
-            <p><strong>0 (Inaccurate):</strong> Donned over loose, thick, or wrinkled outerwear (jeans, cargo pants, bulky fleece sweatpants, multi-layers).</p>
-            <p><strong>9 (Indeterminate):</strong> Frame-tight crop making it impossible to resolve fabric thickness from thin undersleeve.</p>
-          </div>
-
-          <div class="grid grid-cols-3 gap-1.5 mt-2.5">
-            <div>
-              <input type="radio" name="cat5" id="cat5_1" value="1" class="hidden score-radio" onchange="onScoreChange()">
-              <label for="cat5_1" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Correct (1)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat5" id="cat5_0" value="0" class="hidden score-radio score-radio-zero" onchange="onScoreChange()">
-              <label for="cat5_0" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Inaccurate (0)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat5" id="cat5_9" value="9" class="hidden score-radio score-radio-indet" onchange="onScoreChange()">
-              <label for="cat5_9" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Indeterminate (9)</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================= CATEGORY 6 ================= -->
-        <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-slate-300 transition">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <span class="text-[10px] font-bold text-clinical-700 uppercase tracking-wider">Category 6</span>
-              <h3 class="font-bold text-slate-900 text-xs">Strap Placement & Fastening</h3>
-            </div>
-            <button type="button" onclick="toggleCriteriaHelp('helpCat6')" class="text-slate-400 hover:text-clinical-600">
-              <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-
-          <div id="helpCat6" class="hidden my-2 p-2 bg-slate-50 rounded text-[11px] text-slate-600 border border-slate-200 space-y-1">
-            <p><strong>1 (Correct):</strong> Straps lie flush against cuffs/limb; Velcro fastened in landing zones; no loose loops or severe slack.</p>
-            <p><strong>0 (Inaccurate):</strong> Dangling/unfastened straps; long-axis twist; buckled backward/wrong loops; visible gap > 1 cm.</p>
-            <p><strong>9 (Indeterminate):</strong> Straps obscured from view (e.g., camera showing only non-strap shell side).</p>
-          </div>
-
-          <div class="grid grid-cols-3 gap-1.5 mt-2.5">
-            <div>
-              <input type="radio" name="cat6" id="cat6_1" value="1" class="hidden score-radio" onchange="onScoreChange()">
-              <label for="cat6_1" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Correct (1)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat6" id="cat6_0" value="0" class="hidden score-radio score-radio-zero" onchange="onScoreChange()">
-              <label for="cat6_0" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Inaccurate (0)</span>
-              </label>
-            </div>
-            <div>
-              <input type="radio" name="cat6" id="cat6_9" value="9" class="hidden score-radio score-radio-indet" onchange="onScoreChange()">
-              <label for="cat6_9" class="flex flex-col items-center justify-center p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer font-semibold text-xs transition">
-                <span class="text-xs">Indeterminate (9)</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================= CATEGORY 7: CONTEXTUAL METADATA ================= -->
-        <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
-          <div>
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Category 7 (Subgroup Metadata)</span>
-            <h3 class="font-bold text-slate-800 text-xs">Contextual Posture & Setting</h3>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Subject Posture</label>
-              <select id="postureSelect" class="w-full text-xs rounded border border-slate-300 bg-white p-1.5 text-slate-800 focus:ring-1 focus:ring-clinical-500">
-                <option value="Seated_Flexed_30_90">Seated flexed 30°-90° (Standard)</option>
-                <option value="Seated_Fully_Extended">Seated fully extended (0°)</option>
-                <option value="Standing_Weight_Bearing">Standing weight-bearing</option>
-                <option value="Active_Locomotion">Active locomotion (Run / Cut)</option>
-                <option value="Unclear_Other">Unclear / Other</option>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Posture_Class <span class="text-rose-400">*</span></label>
+              <select id="postureSelect" onchange="recalculateComposite()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+                <option value="">-- Select Posture --</option>
+                <option value="Seated_Flexed_30_90">Seated with knee flexed 30°–90° (standard donning)</option>
+                <option value="Seated_Extended">Seated fully extended</option>
+                <option value="Standing_WeightBearing">Standing weight-bearing</option>
+                <option value="Active_Locomotion">Active locomotion (running, cutting, jumping)</option>
+                <option value="Indeterminate_Cropped">Indeterminate / Tightly cropped</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Environmental Setting</label>
-              <select id="settingSelect" class="w-full text-xs rounded border border-slate-300 bg-white p-1.5 text-slate-800 focus:ring-1 focus:ring-clinical-500">
-                <option value="Clinical_Rehab">Clinical / Rehabilitation Facility</option>
-                <option value="Athletic_Field_Gym">Athletic Field / Court / Gym</option>
-                <option value="Home_Casual_Studio">Home / Casual / Stock Studio</option>
-                <option value="Other">Other / Indeterminate</option>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Setting_Class <span class="text-rose-400">*</span></label>
+              <select id="settingSelect" onchange="recalculateComposite()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+                <option value="">-- Select Environment --</option>
+                <option value="Clinical_Rehab">Clinical / Rehabilitation facility</option>
+                <option value="Athletic_Field_Gym">Athletic field / court / gym</option>
+                <option value="Home_Casual_Studio">Home / Casual / Stock studio backdrop</option>
+                <option value="Indeterminate">Indeterminate</option>
               </select>
             </div>
           </div>
         </div>
 
-        <!-- ================= RATER CONFIDENCE & NOTES ================= -->
-        <div class="p-3 bg-white border border-slate-200 rounded-lg space-y-3">
+        <!-- Consensus Flag & Qualitative Adjudication Notes -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
           <div class="flex items-center justify-between">
-            <label class="font-bold text-slate-800 text-xs">Evaluator Confidence Level</label>
-            <span id="confidenceLabel" class="font-mono text-xs font-bold text-clinical-700 bg-clinical-50 px-2 py-0.5 rounded border border-clinical-200">5 - Very High</span>
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input id="consensusCheckbox" type="checkbox" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-amber-500" />
+              <span class="text-xs font-semibold text-amber-300">Flag for Consensus / Adjudication Review</span>
+            </label>
+            <span class="text-[11px] text-slate-400">Optional unless flagged</span>
           </div>
-          <input type="range" id="confidenceRange" min="1" max="5" step="1" value="5" oninput="updateConfidenceText(this.value)" class="w-full h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-clinical-600">
-          <div class="flex justify-between text-[10px] text-slate-400">
-            <span>1 (Very Low / Ambiguous)</span>
-            <span>3 (Moderate)</span>
-            <span>5 (Absolute Certainty)</span>
-          </div>
-
-          <div>
-            <label class="block font-bold text-slate-800 text-xs mb-1">Qualitative Observations & Landmarks</label>
-            <textarea id="raterNotes" rows="2" placeholder="Record visible joint markers, brace brand details, or specific reasons for 0/9 scores..." class="w-full text-xs rounded border border-slate-300 p-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-clinical-500 resize-none"></textarea>
-          </div>
-
-          <div id="flagNoteContainer" class="hidden">
-            <label class="block font-bold text-rose-700 text-xs mb-1">Consensus Adjudication Reason</label>
-            <input type="text" id="flagReasonInput" placeholder="Why should this specimen be evaluated by a senior panel?" class="w-full text-xs rounded border border-rose-300 bg-rose-50/50 p-2 text-rose-900 focus:ring-1 focus:ring-rose-500">
-          </div>
+          <textarea id="notesInput" rows="2" placeholder="Document specific anatomical anomalies, strap routing errors, or borderline boundary judgments..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"></textarea>
         </div>
 
-      </form>
+      </div>
 
-      <!-- Save / Continue Action Bar -->
-      <div class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-        <button type="button" onclick="clearActiveRubric()" class="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-1">
-          Reset Form
-        </button>
-        <button type="button" id="btnSaveSubmit" onclick="saveAndAdvance()" class="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg bg-clinical-700 hover:bg-clinical-800 text-white text-xs font-bold shadow transition">
-          <i data-lucide="check" class="w-4 h-4"></i> Save & Continue
-        </button>
+      <!-- Sticky Bottom Action Footer -->
+      <div class="bg-slate-900 border-t border-slate-800 px-4 py-3 flex items-center justify-between gap-3 shrink-0">
+        <div id="validationWarning" class="text-xs text-rose-400 font-medium hidden">
+          Complete Categories 1–6 and Posture/Setting before saving.
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <button onclick="clearCurrentForm()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition">
+            Reset Form
+          </button>
+          <button onclick="saveAndNext()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white shadow transition flex items-center gap-1.5">
+            <span>Save & Next Specimen</span>
+            <span class="text-emerald-200 font-mono text-[10px]">[Enter]</span>
+          </button>
+        </div>
       </div>
     </section>
-
   </main>
 
-  <!-- ================= MODAL 1: STUDY CONFIGURATION & DATASET ================= -->
-  <div id="configModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-xl w-full p-5 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-          <i data-lucide="sliders" class="w-4 h-4 text-clinical-600"></i> Study Configuration & Image Manifest
-        </h3>
-        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600">
-          <i data-lucide="x" class="w-4 h-4"></i>
+  <!-- Study Configuration Modal -->
+  <div id="configModal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-white">Study Configuration & Dataset</h2>
+          <p class="text-xs text-slate-400">Configure active rater identity, randomization seed, and cloud sync.</p>
+        </div>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white text-lg font-bold px-2">×</button>
+      </div>
+
+      <div class="space-y-3.5">
+        <!-- Standardized Rater Dropdown -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-200 mb-1">Active Evaluator (Rater_ID)</label>
+          <select id="raterSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <option value="Rater_01">Rater_01 - Tanner</option>
+            <option value="Rater_02">Rater_02 - Michael</option>
+            <option value="Rater_03">Rater_03 - Garrett</option>
+          </select>
+        </div>
+
+        <!-- Presentation Order Mode -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-200 mb-1">Specimen Presentation Order</label>
+          <select id="orderModeSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <option value="sequential">Sequential (1 → N)</option>
+            <option value="randomized">Randomized per Rater (Deterministic Seed)</option>
+          </select>
+          <p class="text-[11px] text-slate-400 mt-1">Deterministic seeding shuffles order uniquely per Rater_ID while preserving exact order across reloads.</p>
+        </div>
+
+        <!-- Double-Blinded Toggle -->
+        <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg p-3">
+          <div>
+            <span class="text-xs font-semibold text-slate-200 block">Double-Blinded Filename Masking</span>
+            <span class="text-[11px] text-slate-400">Hides raw filenames in header (displays SPECIMEN_0001).</span>
+          </div>
+          <input id="blindedToggle" type="checkbox" checked class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+        </div>
+
+        <!-- Local Folder Override (Optional) -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-200 mb-1">Load Local Image Folder (Optional Override)</label>
+          <input id="localFolderInput" type="file" webkitdirectory directory multiple accept="image/*" onchange="handleLocalFolderUpload(event)" class="w-full text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer" />
+          <p class="text-[11px] text-slate-400 mt-1">By default, the app automatically loads <code class="text-indigo-300">./manifest.json</code> from your GitHub repo.</p>
+        </div>
+
+        <!-- Google Apps Script Webhook URL -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-200 mb-1">Google Sheets Apps Script Web App URL (Optional)</label>
+          <input id="webhookUrlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+          <p class="text-[11px] text-slate-400 mt-1">When provided, every saved rating automatically appends a row to your shared master Google Sheet.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+        <button onclick="clearStoredData()" class="text-xs text-rose-400 hover:text-rose-300 font-medium">
+          Clear Local Cache
         </button>
-      </div>
-
-      <div class="space-y-3.5 text-xs">
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Rater / Evaluator Identification Code *</label>
-          <input type="text" id="modalRaterId" placeholder="e.g. RATER_01, MD_EVALUATOR_B" class="w-full rounded border border-slate-300 p-2 text-slate-800 font-semibold focus:ring-1 focus:ring-clinical-500">
-          <p class="text-[11px] text-slate-500 mt-0.5">Used for calculating inter-rater reliability (Cohen's & Fleiss' Kappa).</p>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Central Google Apps Script Web App Endpoint URL (Optional)</label>
-          <input type="url" id="modalWebhookUrl" placeholder="https://script.google.com/macros/s/AKfyc.../exec" class="w-full rounded border border-slate-300 p-2 font-mono text-[11px] text-slate-800 focus:ring-1 focus:ring-clinical-500">
-          <p class="text-[11px] text-slate-500 mt-0.5">Scored entries will automatically post to your Google Sheet in the background.</p>
-        </div>
-
-        <div class="pt-2 border-t border-slate-100">
-          <label class="block font-bold text-slate-700 mb-1">Ingest Image Dataset</label>
-          
-          <div class="flex gap-2 mb-2">
-            <button type="button" onclick="setIngestTab('manifest')" id="tabManifest" class="px-3 py-1 rounded bg-clinical-50 border border-clinical-500 text-clinical-800 font-semibold text-xs">URL / Path List</button>
-            <button type="button" onclick="setIngestTab('local')" id="tabLocal" class="px-3 py-1 rounded bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold text-xs">Local Files / Folder</button>
-          </div>
-
-          <div id="ingestManifestSection" class="space-y-1">
-            <textarea id="manifestTextarea" rows="4" placeholder="Enter one image URL or local relative path per line:&#10;images/brace_sample_01.jpg&#10;https://example.com/knee_02.png" class="w-full rounded border border-slate-300 p-2 font-mono text-[11px] text-slate-800 resize-none"></textarea>
-            <p class="text-[10px] text-slate-500">Relative paths (e.g. <code>images/knee_01.jpg</code>) work directly when hosted on GitHub Pages.</p>
-          </div>
-
-          <div id="ingestLocalSection" class="hidden space-y-1">
-            <input type="file" id="localFilesInput" multiple accept="image/*" class="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-clinical-50 file:text-clinical-700 hover:file:bg-clinical-100">
-            <p class="text-[10px] text-slate-500">Uploaded files are read in client memory via Object URLs and are not sent outside your browser.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-        <button onclick="restoreDefaultImages()" class="text-xs text-slate-500 hover:text-slate-800 underline">Reset to Sample Images</button>
-        <div class="flex gap-2">
-          <button onclick="closeConfigModal()" class="px-3 py-1.5 rounded border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-          <button onclick="saveConfiguration()" class="px-4 py-1.5 rounded bg-clinical-700 hover:bg-clinical-800 text-xs font-bold text-white shadow-xs">Apply Settings</button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeConfigModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300">Cancel</button>
+          <button onclick="applyConfig()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">Apply Settings</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ================= MODAL 2: GOOGLE APPS SCRIPT BACKEND GENERATOR ================= -->
-  <div id="appsScriptModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-2xl w-full p-5 shadow-2xl border border-slate-200 space-y-3.5 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+  <!-- Google Apps Script Modal -->
+  <div id="scriptModal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
-          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-            <i data-lucide="sheet" class="w-4 h-4 text-emerald-600"></i> Serverless Google Sheet Aggregation Script
-          </h3>
-          <p class="text-[11px] text-slate-500">Zero-cost collaborative backend for aggregating scores from all raters.</p>
+          <h2 class="text-base font-bold text-white">Google Sheets Real-Time Aggregation Script</h2>
+          <p class="text-xs text-slate-400">Paste into Extensions → Apps Script in a blank Google Sheet, deploy as Web App (Anyone access).</p>
         </div>
-        <button onclick="closeAppsScriptModal()" class="text-slate-400 hover:text-slate-600">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+        <button onclick="closeScriptModal()" class="text-slate-400 hover:text-white text-lg font-bold px-2">×</button>
       </div>
 
-      <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
-        <p><strong>Instructions to activate your multi-rater database:</strong></p>
-        <ol class="list-decimal list-inside space-y-1 text-[11px] bg-slate-50 p-2.5 rounded border border-slate-200">
-          <li>Create a new blank <strong>Google Sheet</strong> (e.g., named <em>Knee_Brace_Research_Scores</em>).</li>
-          <li>In Google Sheets, go to <strong>Extensions &gt; Apps Script</strong>.</li>
-          <li>Paste the code below, replacing any existing template code.</li>
-          <li>Click <strong>Deploy &gt; New deployment &gt; Select type: Web app</strong>.</li>
-          <li>Set <em>Execute as:</em> <strong>Me</strong> and <em>Who has access:</em> <strong>Anyone</strong>.</li>
-          <li>Copy the provided <strong>Web App URL</strong> and paste it into the <em>Settings</em> of this website.</li>
-        </ol>
-      </div>
+      <pre id="appsScriptCode" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-emerald-300 overflow-x-auto max-h-72 select-all">function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var headers = [
+    "Timestamp", "Rater_ID", "Presentation_Seq", "Specimen_ID", "Filename",
+    "Cat1_Axial", "Cat2_JointLine", "Cat3_AP_Plane", "Cat4_Patellar",
+    "Cat5_SkinInterface", "Cat6_Straps", "Accurate_Count", "Evaluable_Count",
+    "Composite_Pass", "Posture_Class", "Setting_Class", "Consensus_Flag", "Notes"
+  ];
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+  }
+  var data = JSON.parse(e.postData.contents);
+  var row = headers.map(function(h) { return data[h] !== undefined ? data[h] : ""; });
+  sheet.appendRow(row);
+  return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
 
-      <div class="relative">
-        <textarea id="appsScriptCodeBlock" readonly rows="9" class="w-full p-2.5 bg-slate-900 text-emerald-400 font-mono text-[10.5px] rounded border border-slate-800 select-all"></textarea>
-        <button onclick="copyAppsScriptCode()" class="absolute top-2 right-2 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-[11px] font-semibold border border-slate-700 flex items-center gap-1">
-          <i data-lucide="copy" class="w-3.5 h-3.5"></i> <span>Copy Code</span>
-        </button>
-      </div>
-
-      <div class="flex justify-end pt-2 border-t border-slate-100">
-        <button onclick="closeAppsScriptModal()" class="px-4 py-1.5 rounded bg-slate-800 hover:bg-slate-900 text-xs font-bold text-white">Close</button>
+      <div class="flex justify-end gap-2">
+        <button onclick="copyAppsScript()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">Copy Code</button>
+        <button onclick="closeScriptModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- ================= JAVASCRIPT APPLICATION LOGIC ================= -->
   <script>
-    /* ==========================================================================
-       SAMPLE RESEARCH IMAGERY & STATE
-       ========================================================================== */
-    const DEFAULT_SPECIMENS = [
+    // =========================================================================
+    // 1. OPERATIONAL RUBRIC DEFINITIONS (CATEGORIES 1 - 6)
+    // =========================================================================
+    const RUBRIC_CATEGORIES = [
       {
-        id: "BRACE_001.jpg",
-        url: "https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?auto=format&fit=crop&w=1200&q=80"
+        id: "Cat1_Axial",
+        num: "Cat 1",
+        title: "Vertical / Axial Orientation",
+        definition: "Structural frame donned right-side up relative to proximal thigh and distal calf geometry.",
+        b1: "Wider thigh cuff proximal; narrower calf cuff distal; ROM hinge stops oriented per design.",
+        b0: "Upside down (calf shell on thigh or condyle hinges over tibial shaft).",
+        b9: "Extreme zoom showing only hinge center, obscuring upper and lower cuffs."
       },
       {
-        id: "BRACE_002.jpg",
-        url: "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=1200&q=80"
+        id: "Cat2_JointLine",
+        num: "Cat 2",
+        title: "Joint Line / Epicondylar Center",
+        definition: "Mechanical hinge axis mirrors the tibiofemoral flexion-extension axis (lateral femoral epicondyle).",
+        b1: "Hinge center within condylar zone: superior patellar border to tibial tubercle (≤1.5–2.0 cm of joint line).",
+        b0: "Gross vertical migration: hinge proximal to superior patella (mid-femur) or distal to tibial tuberosity.",
+        b9: "Hinge covered by clothing, extreme frontal view hiding axis, or leg cropped at knee."
       },
       {
-        id: "BRACE_003.jpg",
-        url: "https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=1200&q=80"
+        id: "Cat3_AP_Plane",
+        num: "Cat 3",
+        title: "Anteroposterior Plane Position",
+        definition: "Rigid or semi-rigid longitudinal upright struts parallel the mechanical axis in the mid-coronal plane.",
+        b1: "Uprights align with mid-lateral/medial line dividing anterior and posterior halves evenly (deviation ≤15°).",
+        b0: "Severe rotational malalignment: uprights rotated anteriorly over patella/quad or posteriorly into popliteal fossa (>15°).",
+        b9: "Pure AP (direct anterior) or posterior camera angle where coronal depth of lateral strut cannot be judged."
       },
       {
-        id: "BRACE_004.jpg",
-        url: "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=1200&q=80"
+        id: "Cat4_Patellar",
+        num: "Cat 4",
+        title: "Patellar Alignment & Window",
+        definition: "For anterior cutouts/buttresses, patella is seated within aperture; for open frames, arch clears superiorly.",
+        b1: "Patella centered within cutout ring (≤1/3 patellar width overlapping material) or arch clears superiorly without compression.",
+        b0: "Cutout rests over quad tendon (too high) or tibial tuberosity (too low), or patella displaced under solid neoprene.",
+        b9: "Pure lateral profile where patellar centering cannot be seen, or brace style lacks anterior reference window."
+      },
+      {
+        id: "Cat5_SkinInterface",
+        num: "Cat 5",
+        title: "Skin Interface vs. Layering",
+        definition: "Brace worn directly against skin or over approved, non-shearing thin base layers.",
+        b1: "Bare skin, under athletic shorts, or over single thin smooth base layer (compression tight/undersleeve) without bunching.",
+        b0: "Donned over loose, thick, or wrinkled outerwear (denim jeans, cargo pants, bulky sweatpants, or multiple layers).",
+        b9: "Frame-tight crop making it impossible to distinguish thick garment from thin compression tight."
+      },
+      {
+        id: "Cat6_Straps",
+        num: "Cat 6",
+        title: "Strap Placement & Fastening",
+        definition: "All hook-and-loop straps engaged, tensioned, and routed in correct anatomical direction without slack.",
+        b1: "Straps lie flush against cuffs/limb; Velcro ends fastened in landing zones; no loose loops or severe slack.",
+        b0: "Dangling/unfastened straps, twisted along long axis, routed through wrong anchor loops, or gap >1 cm.",
+        b9: "Straps obscured from view (e.g., viewing only the non-strap side of the brace)."
       }
     ];
 
-    let studyState = {
-      raterId: "RATER_01",
-      webhookUrl: "",
-      blinded: false,
-      images: [...DEFAULT_SPECIMENS],
-      currentIndex: 0,
-      scores: {}, // Keyed by image id
-      zoom: 1,
-      pan: { x: 0, y: 0 },
-      isDragging: false,
-      dragStart: { x: 0, y: 0 },
-      invertContrast: false
+    // =========================================================================
+    // 2. BUILT-IN FALLBACK SVG BENCHMARKS (USED IF NO MANIFEST.JSON FOUND)
+    // =========================================================================
+    function createFallbackSVG(title, subtitle, colorHex) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="720" viewBox="0 0 600 720">
+        <rect width="600" height="720" fill="#0f172a"/>
+        <rect x="20" y="20" width="560" height="680" rx="16" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+        <!-- Thigh & Calf Silhouette -->
+        <path d="M220,110 L380,110 L355,340 L345,610 L255,610 L245,340 Z" fill="#334155" opacity="0.6"/>
+        <!-- Upper Thigh Cuff -->
+        <rect x="205" y="165" width="190" height="58" rx="10" fill="${colorHex}" opacity="0.85"/>
+        <!-- Lower Calf Cuff -->
+        <rect x="225" y="475" width="150" height="54" rx="10" fill="${colorHex}" opacity="0.85"/>
+        <!-- Lateral & Medial Uprights -->
+        <rect x="212" y="185" width="14" height="320" rx="6" fill="#94a3b8"/>
+        <rect x="374" y="185" width="14" height="320" rx="6" fill="#94a3b8"/>
+        <!-- Condylar Hinge Center -->
+        <circle cx="219" cy="350" r="22" fill="#0f172a" stroke="#f8fafc" stroke-width="4"/>
+        <circle cx="381" cy="350" r="22" fill="#0f172a" stroke="#f8fafc" stroke-width="4"/>
+        <!-- Patellar Cutout Ring -->
+        <circle cx="300" cy="345" r="36" fill="none" stroke="#e2e8f0" stroke-width="6" stroke-dasharray="10 6"/>
+        <text x="300" y="65" fill="#f8fafc" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">${title}</text>
+        <text x="300" y="92" fill="#94a3b8" font-family="sans-serif" font-size="13" text-anchor="middle">${subtitle}</text>
+        <text x="300" y="665" fill="#64748b" font-family="monospace" font-size="12" text-anchor="middle">DEMO BENCHMARK SVG • ADD manifest.json TO LOAD REPO IMAGES</text>
+      </svg>`;
+      return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    }
+
+    const FALLBACK_SPECIMENS = [
+      { id: "DEMO_0001", filename: "demo_proper_hinged_acl.svg", url: createFallbackSVG("DEMO 01: Standard Hinged Knee Brace", "Aligned epicondylar hinge & patellar cutout", "#4f46e5") },
+      { id: "DEMO_0002", filename: "demo_distal_migration.svg", url: createFallbackSVG("DEMO 02: Inferior Migration Benchmark", "Verify Cat 2 joint line & Cat 4 patellar alignment", "#0ea5e9") },
+      { id: "DEMO_0003", filename: "demo_strap_slack_case.svg", url: createFallbackSVG("DEMO 03: Lateral Profile Inspection", "Test zoom/pan & indeterminate boundary rules", "#10b981") }
+    ];
+
+    // =========================================================================
+    // 3. APPLICATION STATE & STORAGE KEYS
+    // =========================================================================
+    const STORAGE_KEY_RECORDS = "bracefit_records_v2";
+    const STORAGE_KEY_CONFIG = "bracefit_config_v2";
+
+    const RATER_NAMES = {
+      "Rater_01": "Rater_01 (Tanner)",
+      "Rater_02": "Rater_02 (Michael)",
+      "Rater_03": "Rater_03 (Garrett)"
     };
 
-    /* ==========================================================================
-       INITIALIZATION
-       ========================================================================== */
-    window.addEventListener('DOMContentLoaded', () => {
-      lucide.createIcons();
-      loadFromStorage();
-      renderCurrentImage();
-      setupViewportControls();
-      setupHotkeys();
-      populateAppsScriptTemplate();
-    });
+    let config = {
+      raterId: "Rater_01",
+      orderMode: "sequential", // "sequential" | "randomized"
+      blinded: true,
+      webhookUrl: ""
+    };
 
-    /* ==========================================================================
-       PAN & ZOOM INTERACTION ENGINE
-       ========================================================================== */
-    function setupViewportControls() {
-      const viewport = document.getElementById('imageViewport');
+    let baseSpecimens = [...FALLBACK_SPECIMENS];
+    let activeSpecimens = [...FALLBACK_SPECIMENS];
+    let currentIndex = 0;
+    let records = {}; // Keyed by `${raterId}::${specimenId}`
+    let currentSelections = {}; // { Cat1_Axial: 1 | 0 | 9, ... }
 
-      // Wheel Zoom
-      viewport.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        const delta = e.deltaY < 0 ? 0.2 : -0.2;
-        adjustZoom(delta);
-      }, { passive: false });
+    // Pan & Zoom State
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let contrastEnabled = false;
 
-      // Mouse drag
-      viewport.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-        studyState.isDragging = true;
-        studyState.dragStart = { x: e.clientX - studyState.pan.x, y: e.clientY - studyState.pan.y };
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!studyState.isDragging) return;
-        studyState.pan.x = e.clientX - studyState.dragStart.x;
-        studyState.pan.y = e.clientY - studyState.dragStart.y;
-        applyTransform();
-      });
-
-      window.addEventListener('mouseup', () => {
-        studyState.isDragging = false;
-      });
-
-      // Touch Drag & Pinch Zoom
-      let initialDist = 0;
-      viewport.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-          studyState.isDragging = true;
-          studyState.dragStart = { x: e.touches[0].clientX - studyState.pan.x, y: e.touches[0].clientY - studyState.pan.y };
-        } else if (e.touches.length === 2) {
-          initialDist = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-          );
-        }
-      });
-
-      viewport.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 1 && studyState.isDragging) {
-          studyState.pan.x = e.touches[0].clientX - studyState.dragStart.x;
-          studyState.pan.y = e.touches[0].clientY - studyState.dragStart.y;
-          applyTransform();
-        } else if (e.touches.length === 2) {
-          const currentDist = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-          );
-          if (initialDist > 0) {
-            const zoomDelta = (currentDist - initialDist) * 0.005;
-            adjustZoom(zoomDelta);
-            initialDist = currentDist;
-          }
-        }
-      });
-
-      viewport.addEventListener('touchend', () => {
-        studyState.isDragging = false;
-      });
-    }
-
-    function adjustZoom(delta) {
-      let nextZoom = studyState.zoom + delta;
-      if (nextZoom < 0.4) nextZoom = 0.4;
-      if (nextZoom > 6.0) nextZoom = 6.0;
-      studyState.zoom = Math.round(nextZoom * 100) / 100;
-      applyTransform();
-    }
-
-    function resetZoomPan() {
-      studyState.zoom = 1;
-      studyState.pan = { x: 0, y: 0 };
-      applyTransform();
-    }
-
-    function applyTransform() {
-      const container = document.getElementById('imageTransformContainer');
-      const img = document.getElementById('mainImage');
-      container.style.transform = `translate(${studyState.pan.x}px, ${studyState.pan.y}px) scale(${studyState.zoom})`;
-      document.getElementById('zoomDisplay').textContent = `${Math.round(studyState.zoom * 100)}%`;
-      
-      if (studyState.invertContrast) {
-        img.style.filter = "invert(1) contrast(1.2)";
-      } else {
-        img.style.filter = "none";
+    // =========================================================================
+    // 4. DETERMINISTIC SEEDED RANDOMIZATION (MULBERRY32 PRNG)
+    // =========================================================================
+    function hashStringToSeed(str) {
+      let h = 2166136261 >>> 0;
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
       }
+      return h >>> 0;
     }
 
-    function toggleInvertColors() {
-      studyState.invertContrast = !studyState.invertContrast;
-      applyTransform();
-      showToast(studyState.invertContrast ? "High Contrast Inversion Enabled" : "Normal Display Restored", "info");
-    }
-
-    /* ==========================================================================
-       KEYBOARD HOTKEYS
-       ========================================================================== */
-    function setupHotkeys() {
-      window.addEventListener('keydown', (e) => {
-        // Prevent hotkeys from firing while typing in notes/inputs
-        const tag = document.activeElement.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-
-        if (e.key === 'r' || e.key === 'R') {
-          e.preventDefault();
-          resetZoomPan();
-        } else if (e.key === '+' || e.key === '=') {
-          e.preventDefault();
-          adjustZoom(0.25);
-        } else if (e.key === '-' || e.key === '_') {
-          e.preventDefault();
-          adjustZoom(-0.25);
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          saveAndAdvance();
-        } else if (e.key === 'Backspace' || e.key === 'p' || e.key === 'P') {
-          e.preventDefault();
-          navigateImage(-1);
-        }
-      });
-    }
-
-    /* ==========================================================================
-       IMAGE DISPLAY & FORM POPULATION
-       ========================================================================== */
-    function renderCurrentImage() {
-      const images = studyState.images;
-      const current = images[studyState.currentIndex];
-
-      if (!current) {
-        document.getElementById('mainImage').style.display = 'none';
-        document.getElementById('emptyNotice').classList.remove('hidden');
-        document.getElementById('activeImageFilename').textContent = "NONE";
-        return;
-      }
-
-      document.getElementById('emptyNotice').classList.add('hidden');
-      const img = document.getElementById('mainImage');
-      img.style.display = 'block';
-      img.src = current.url;
-
-      // Handle Blinded Mode Masking
-      const displayFilename = studyState.blinded ? `BLINDED_SPECIMEN_${studyState.currentIndex + 1}` : current.id;
-      document.getElementById('activeImageFilename').textContent = displayFilename;
-      document.getElementById('currentImageIndexBadge').textContent = `${studyState.currentIndex + 1} / ${images.length}`;
-
-      // Update Top Progress Bar
-      const pct = images.length > 0 ? ((studyState.currentIndex + 1) / images.length) * 100 : 0;
-      document.getElementById('studyProgressBar').style.width = `${pct}%`;
-
-      document.getElementById('prevBtn').disabled = studyState.currentIndex === 0;
-      document.getElementById('nextBtn').disabled = studyState.currentIndex >= images.length - 1;
-
-      resetZoomPan();
-      populateFormFromSaved();
-      onScoreChange();
-    }
-
-    function populateFormFromSaved() {
-      const current = studyState.images[studyState.currentIndex];
-      if (!current) return;
-
-      const saved = studyState.scores[current.id];
-
-      // Reset all radio selections
-      for (let i = 1; i <= 6; i++) {
-        const radios = document.querySelectorAll(`input[name="cat${i}"]`);
-        radios.forEach(r => r.checked = false);
-      }
-
-      const flagIndicator = document.getElementById('flagIndicatorBadge');
-      const flagBtnIcon = document.getElementById('flagBtnIcon');
-      const flagBtnText = document.getElementById('flagBtnText');
-      const flagNoteBox = document.getElementById('flagNoteContainer');
-
-      if (saved) {
-        for (let i = 1; i <= 6; i++) {
-          const val = saved[`cat${i}`];
-          if (val !== undefined && val !== null) {
-            const rad = document.getElementById(`cat${i}_${val}`);
-            if (rad) rad.checked = true;
-          }
-        }
-        document.getElementById('postureSelect').value = saved.postureClass || "Seated_Flexed_30_90";
-        document.getElementById('settingSelect').value = saved.settingClass || "Clinical_Rehab";
-        document.getElementById('confidenceRange').value = saved.confidenceLevel || 5;
-        updateConfidenceText(saved.confidenceLevel || 5);
-        document.getElementById('raterNotes').value = saved.notes || "";
-        document.getElementById('flagReasonInput').value = saved.flagReason || "";
-
-        if (saved.flagConsensus) {
-          flagIndicator.classList.remove('hidden');
-          flagIndicator.classList.add('inline-flex');
-          flagBtnIcon.setAttribute('class', 'w-3.5 h-3.5 text-rose-400');
-          flagBtnText.textContent = "Flagged";
-          flagNoteBox.classList.remove('hidden');
-        } else {
-          flagIndicator.classList.add('hidden');
-          flagIndicator.classList.remove('inline-flex');
-          flagBtnIcon.setAttribute('class', 'w-3.5 h-3.5 text-slate-400');
-          flagBtnText.textContent = "Flag for Consensus";
-          flagNoteBox.classList.add('hidden');
-        }
-      } else {
-        document.getElementById('postureSelect').value = "Seated_Flexed_30_90";
-        document.getElementById('settingSelect').value = "Clinical_Rehab";
-        document.getElementById('confidenceRange').value = 5;
-        updateConfidenceText(5);
-        document.getElementById('raterNotes').value = "";
-        document.getElementById('flagReasonInput').value = "";
-
-        flagIndicator.classList.add('hidden');
-        flagIndicator.classList.remove('inline-flex');
-        flagBtnIcon.setAttribute('class', 'w-3.5 h-3.5 text-slate-400');
-        flagBtnText.textContent = "Flag for Consensus";
-        flagNoteBox.classList.add('hidden');
-      }
-      lucide.createIcons();
-    }
-
-    /* ==========================================================================
-       SCORING LOGIC & COMPUTED METRICS
-       ========================================================================== */
-    function onScoreChange() {
-      let sum = 0;
-      let allAnswered = true;
-      let hasZeroOrIndeterminate = false;
-
-      for (let i = 1; i <= 6; i++) {
-        const checked = document.querySelector(`input[name="cat${i}"]:checked`);
-        if (checked) {
-          const val = parseInt(checked.value, 10);
-          if (val === 1) sum += 1;
-          if (val === 0 || val === 9) hasZeroOrIndeterminate = true;
-        } else {
-          allAnswered = false;
-        }
-      }
-
-      document.getElementById('totalScoreNum').textContent = sum;
-      const badge = document.getElementById('passFailBadge');
-
-      if (!allAnswered) {
-        badge.textContent = "INCOMPLETE";
-        badge.className = "text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide bg-slate-200 text-slate-600";
-      } else if (sum === 6) {
-        badge.textContent = "PASS (ACCURATE FIT)";
-        badge.className = "text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide bg-emerald-600 text-white";
-      } else {
-        badge.textContent = "FAIL (DONNING DEFICIT)";
-        badge.className = "text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide bg-rose-600 text-white";
-      }
-    }
-
-    function toggleCriteriaHelp(helpId) {
-      const el = document.getElementById(helpId);
-      el.classList.toggle('hidden');
-    }
-
-    function updateConfidenceText(val) {
-      const map = {
-        1: "1 - Very Low / Guess",
-        2: "2 - Low / Suboptimal View",
-        3: "3 - Moderate Confidence",
-        4: "4 - High Confidence",
-        5: "5 - Absolute Certainty"
+    function mulberry32(seed) {
+      return function() {
+        let t = (seed += 0x6D2B79F5);
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
       };
-      document.getElementById('confidenceLabel').textContent = map[val] || `${val}`;
     }
 
-    function toggleConsensusFlag() {
-      const current = studyState.images[studyState.currentIndex];
-      if (!current) return;
-
-      const record = studyState.scores[current.id] || {};
-      const newStatus = !record.flagConsensus;
-      record.flagConsensus = newStatus;
-      studyState.scores[current.id] = record;
-
-      const flagIndicator = document.getElementById('flagIndicatorBadge');
-      const flagBtnText = document.getElementById('flagBtnText');
-      const flagNoteBox = document.getElementById('flagNoteContainer');
-
-      if (newStatus) {
-        flagIndicator.classList.remove('hidden');
-        flagIndicator.classList.add('inline-flex');
-        flagBtnText.textContent = "Flagged";
-        flagNoteBox.classList.remove('hidden');
-        showToast("Specimen marked for consensus panel review", "warning");
-      } else {
-        flagIndicator.classList.add('hidden');
-        flagIndicator.classList.remove('inline-flex');
-        flagBtnText.textContent = "Flag for Consensus";
-        flagNoteBox.classList.add('hidden');
-        showToast("Consensus flag cleared", "info");
-      }
-      saveToStorage();
-      lucide.createIcons();
-    }
-
-    /* ==========================================================================
-       SUBMISSION, RECORD ACCUMULATION & ADVANCEMENT
-       ========================================================================== */
-    async function saveAndAdvance() {
-      const current = studyState.images[studyState.currentIndex];
-      if (!current) return;
-
-      // Extract Category 1-6 choices
-      const catScores = {};
-      let unanswered = [];
-      for (let i = 1; i <= 6; i++) {
-        const checked = document.querySelector(`input[name="cat${i}"]:checked`);
-        if (!checked) {
-          unanswered.push(i);
-        } else {
-          catScores[`cat${i}`] = parseInt(checked.value, 10);
+    function buildOrderedSpecimens() {
+      const copy = [...baseSpecimens];
+      if (config.orderMode === "randomized") {
+        const seed = hashStringToSeed(`BraceFit_2026_${config.raterId}`);
+        const rand = mulberry32(seed);
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(rand() * (i + 1));
+          [copy[i], copy[j]] = [copy[j], copy[i]];
         }
       }
-
-      if (unanswered.length > 0) {
-        showToast(`Please score mandatory Categories: ${unanswered.join(', ')}`, "warning");
-        return;
-      }
-
-      const totalScore = Object.values(catScores).filter(v => v === 1).length;
-      const posture = document.getElementById('postureSelect').value;
-      const setting = document.getElementById('settingSelect').value;
-      const confidence = parseInt(document.getElementById('confidenceRange').value, 10);
-      const notes = document.getElementById('raterNotes').value.trim();
-      const flagReason = document.getElementById('flagReasonInput').value.trim();
-      const existing = studyState.scores[current.id] || {};
-      const flag = !!existing.flagConsensus;
-
-      // Structured Tidy Row Record
-      const record = {
-        raterId: studyState.raterId,
-        imageId: current.id,
-        blindedId: `BLIND_${studyState.currentIndex + 1}`,
-        timestamp: new Date().toISOString(),
-        cat1_axialOrientation: catScores.cat1,
-        cat2_jointLineCenter: catScores.cat2,
-        cat3_apPlanePosition: catScores.cat3,
-        cat4_patellarAlignment: catScores.cat4,
-        cat5_skinInterface: catScores.cat5,
-        cat6_strapPlacement: catScores.cat6,
-        totalScore: totalScore,
-        fitClassification: totalScore === 6 ? "PASS" : "FAIL",
-        postureClass: posture,
-        settingClass: setting,
-        confidenceLevel: confidence,
-        flagConsensus: flag,
-        flagReason: flagReason,
-        notes: notes
-      };
-
-      studyState.scores[current.id] = { ...existing, ...record };
-      saveToStorage();
-
-      // Transmit to central Google Sheet if Webhook configured
-      if (studyState.webhookUrl) {
-        postToGoogleSheet(record);
-      }
-
-      showToast(`Specimen ${studyState.blinded ? record.blindedId : current.id} saved!`, "success");
-
-      // Advance
-      if (studyState.currentIndex < studyState.images.length - 1) {
-        navigateImage(1);
-      } else {
-        showToast("Final specimen completed! All scores saved.", "success");
-      }
+      activeSpecimens = copy;
     }
 
-    function navigateImage(direction) {
-      const next = studyState.currentIndex + direction;
-      if (next >= 0 && next < studyState.images.length) {
-        studyState.currentIndex = next;
-        renderCurrentImage();
-      }
-    }
-
-    function clearActiveRubric() {
-      for (let i = 1; i <= 6; i++) {
-        const radios = document.querySelectorAll(`input[name="cat${i}"]`);
-        radios.forEach(r => r.checked = false);
-      }
-      document.getElementById('raterNotes').value = "";
-      document.getElementById('flagReasonInput').value = "";
-      onScoreChange();
-    }
-
-    /* ==========================================================================
-       CLOUD STORAGE & LOCAL STORAGE ENGINE
-       ========================================================================== */
-    function saveToStorage() {
+    // =========================================================================
+    // 5. INITIALIZATION & MANIFEST AUTO-LOADER
+    // =========================================================================
+    function loadSavedState() {
       try {
-        const payload = {
-          raterId: studyState.raterId,
-          webhookUrl: studyState.webhookUrl,
-          blinded: studyState.blinded,
-          scores: studyState.scores
-        };
-        localStorage.setItem('knee_brace_study_data', JSON.stringify(payload));
-      } catch (err) {
-        console.warn("Storage sync error", err);
-      }
-    }
-
-    function loadFromStorage() {
-      try {
-        const raw = localStorage.getItem('knee_brace_study_data');
-        if (raw) {
-          const d = JSON.parse(raw);
-          if (d.raterId) studyState.raterId = d.raterId;
-          if (d.webhookUrl) studyState.webhookUrl = d.webhookUrl;
-          if (typeof d.blinded === 'boolean') studyState.blinded = d.blinded;
-          if (d.scores) studyState.scores = d.scores;
+        const savedCfg = localStorage.getItem(STORAGE_KEY_CONFIG);
+        if (savedCfg) {
+          config = { ...config, ...JSON.parse(savedCfg) };
+          if (!RATER_NAMES[config.raterId]) config.raterId = "Rater_01";
+        }
+        const savedRecs = localStorage.getItem(STORAGE_KEY_RECORDS);
+        if (savedRecs) {
+          records = JSON.parse(savedRecs);
         }
       } catch (e) {
-        console.warn("Cache load error", e);
+        console.warn("Could not read localStorage:", e);
       }
-
-      document.getElementById('displayRaterId').textContent = studyState.raterId;
-      document.getElementById('blindingToggle').checked = studyState.blinded;
     }
 
-    async function postToGoogleSheet(record) {
-      const statusBadge = document.getElementById('cloudSyncStatus');
+    function renderRubricCards() {
+      const container = document.getElementById("binaryCategoriesContainer");
+      container.innerHTML = RUBRIC_CATEGORIES.map(cat => `
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 transition hover:border-slate-700" id="card_${cat.id}">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-indigo-300 border border-slate-700">${cat.num}</span>
+                <h3 class="text-sm font-semibold text-white">${cat.title}</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">${cat.definition}</p>
+            </div>
+
+            <!-- 3-Way Scoring Buttons (1 vs 0 vs 9) -->
+            <div class="flex items-center gap-1.5 shrink-0" role="group" aria-label="${cat.title}">
+              <button type="button" id="btn_${cat.id}_1" onclick="setScore('${cat.id}', 1)"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 bg-slate-950 text-slate-300 hover:border-emerald-600 transition">
+                1 · Correct
+              </button>
+              <button type="button" id="btn_${cat.id}_0" onclick="setScore('${cat.id}', 0)"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 bg-slate-950 text-slate-300 hover:border-rose-600 transition">
+                0 · Inaccurate
+              </button>
+              <button type="button" id="btn_${cat.id}_9" onclick="setScore('${cat.id}', 9)"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 bg-slate-950 text-slate-300 hover:border-amber-500 transition">
+                9 · Indet.
+              </button>
+            </div>
+          </div>
+
+          <!-- Operational Boundaries Collapsible Details -->
+          <details class="text-[11px] text-slate-400 mt-1.5 group">
+            <summary class="cursor-pointer text-slate-400 hover:text-slate-200 select-none font-medium">
+              View Operational Scoring Boundaries
+            </summary>
+            <ul class="mt-2 space-y-1 pl-3 border-l-2 border-slate-800 text-slate-300">
+              <li><strong class="text-emerald-400">Correct (1):</strong> ${cat.b1}</li>
+              <li><strong class="text-rose-400">Inaccurate (0):</strong> ${cat.b0}</li>
+              <li><strong class="text-amber-400">Indeterminate (9):</strong> ${cat.b9}</li>
+            </ul>
+          </details>
+        </div>
+      `).join("");
+    }
+
+    async function autoLoadRepositoryManifest() {
+      const badge = document.getElementById("sourceBadge");
       try {
-        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span> Sending...`;
-        await fetch(studyState.webhookUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(record)
+        const res = await fetch("./manifest.json", { cache: "no-store" });
+        if (!res.ok) throw new Error("manifest.json not found");
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) throw new Error("Empty manifest");
+
+        baseSpecimens = data.map((entry, idx) => {
+          if (typeof entry === "string") {
+            const fname = entry.split("/").pop();
+            return {
+              id: `SPECIMEN_${String(idx + 1).padStart(4, "0")}`,
+              filename: fname,
+              url: entry
+            };
+          } else {
+            const fname = (entry.filename || entry.url || "").split("/").pop();
+            return {
+              id: entry.id || `SPECIMEN_${String(idx + 1).padStart(4, "0")}`,
+              filename: fname,
+              url: entry.url
+            };
+          }
         });
-        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Synced`;
+
+        badge.textContent = `Repo Manifest: ${baseSpecimens.length} images`;
+        badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-medium";
       } catch (err) {
-        console.error("Google Sheets Webhook error:", err);
-        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Sync Fail`;
+        baseSpecimens = [...FALLBACK_SPECIMENS];
+        badge.textContent = `Demo Mode (${baseSpecimens.length} SVG benchmarks)`;
+        badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800 font-medium";
+      }
+
+      buildOrderedSpecimens();
+      currentIndex = 0;
+      populateJumpDropdown();
+      renderCurrentSpecimen();
+      updateHeaderTelemetry();
+    }
+
+    function handleLocalFolderUpload(event) {
+      const files = Array.from(event.target.files || [])
+        .filter(f => f.type.startsWith("image/"))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      if (files.length === 0) return;
+
+      baseSpecimens = files.map((file, idx) => ({
+        id: `SPECIMEN_${String(idx + 1).padStart(4, "0")}`,
+        filename: file.name,
+        url: URL.createObjectURL(file)
+      }));
+
+      const badge = document.getElementById("sourceBadge");
+      badge.textContent = `Local Folder: ${baseSpecimens.length} images`;
+      badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-medium";
+
+      buildOrderedSpecimens();
+      currentIndex = 0;
+      populateJumpDropdown();
+      renderCurrentSpecimen();
+    }
+
+    // =========================================================================
+    // 6. SPECIMEN RENDERING & FORM STATE SYNCHRONIZATION
+    // =========================================================================
+    function populateJumpDropdown() {
+      const sel = document.getElementById("specimenJumpSelect");
+      sel.innerHTML = activeSpecimens.map((s, idx) => {
+        const key = `${config.raterId}::${s.id}`;
+        const doneMark = records[key] ? "✓ " : "";
+        const label = config.blinded ? s.id : `${s.id} (${s.filename})`;
+        return `<option value="${idx}">${doneMark}#${idx + 1} — ${label}</option>`;
+      }).join("");
+      document.getElementById("progressCounter").textContent = `/ ${activeSpecimens.length}`;
+    }
+
+    function renderCurrentSpecimen() {
+      if (activeSpecimens.length === 0) return;
+      const spec = activeSpecimens[currentIndex];
+      const imgEl = document.getElementById("specimenImage");
+      imgEl.src = spec.url;
+
+      // Update header labels
+      document.getElementById("specimenTitle").textContent = config.blinded
+        ? `${spec.id} (Blinded)`
+        : `${spec.id} — ${spec.filename}`;
+
+      document.getElementById("orderModeTag").textContent =
+        config.orderMode === "randomized" ? `Randomized (${config.raterId} Seed)` : "Sequential";
+
+      document.getElementById("specimenJumpSelect").value = String(currentIndex);
+      resetTransform();
+
+      // Load existing record for this rater + specimen if already scored
+      const recordKey = `${config.raterId}::${spec.id}`;
+      const existing = records[recordKey];
+      const scoredBadge = document.getElementById("scoredBadge");
+
+      if (existing) {
+        scoredBadge.textContent = "Saved ✓";
+        scoredBadge.className = "ml-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800";
+
+        currentSelections = {};
+        RUBRIC_CATEGORIES.forEach(cat => {
+          currentSelections[cat.id] = existing[cat.id];
+        });
+        document.getElementById("postureSelect").value = existing.Posture_Class || "";
+        document.getElementById("settingSelect").value = existing.Setting_Class || "";
+        document.getElementById("consensusCheckbox").checked = existing.Consensus_Flag === "YES";
+        document.getElementById("notesInput").value = existing.Notes || "";
+      } else {
+        scoredBadge.textContent = "Unscored";
+        scoredBadge.className = "ml-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400";
+        clearCurrentForm(false);
+      }
+
+      refreshButtonStyles();
+      recalculateComposite();
+    }
+
+    function setScore(catId, val) {
+      currentSelections[catId] = val;
+      refreshButtonStyles();
+      recalculateComposite();
+      document.getElementById("validationWarning").classList.add("hidden");
+    }
+
+    function refreshButtonStyles() {
+      RUBRIC_CATEGORIES.forEach(cat => {
+        const val = currentSelections[cat.id];
+        [1, 0, 9].forEach(opt => {
+          const btn = document.getElementById(`btn_${cat.id}_${opt}`);
+          if (!btn) return;
+          btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold border transition ";
+          if (val === opt) {
+            if (opt === 1) btn.className += "bg-emerald-600 border-emerald-400 text-white shadow-sm";
+            if (opt === 0) btn.className += "bg-rose-600 border-rose-400 text-white shadow-sm";
+            if (opt === 9) btn.className += "bg-amber-600 border-amber-400 text-white shadow-sm";
+          } else {
+            btn.className += "border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500";
+          }
+        });
+      });
+    }
+
+    function recalculateComposite() {
+      let accurate = 0;
+      let evaluable = 0;
+      let answeredCount = 0;
+
+      RUBRIC_CATEGORIES.forEach(cat => {
+        const val = currentSelections[cat.id];
+        if (val !== undefined && val !== null) {
+          answeredCount++;
+          if (val === 1 || val === 0) {
+            evaluable++;
+            if (val === 1) accurate++;
+          }
+        }
+      });
+
+      document.getElementById("liveAccurateCount").textContent = accurate;
+      document.getElementById("liveEvaluableCount").textContent = evaluable;
+
+      const pill = document.getElementById("compositeStatusPill");
+      if (answeredCount < 6) {
+        pill.textContent = `Incomplete (${answeredCount}/6)`;
+        pill.className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700";
+      } else if (evaluable === 0) {
+        pill.textContent = "All Indeterminate (9)";
+        pill.className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-950 text-amber-300 border border-amber-800";
+      } else if (accurate === evaluable) {
+        pill.textContent = `PASS (${accurate}/${evaluable} Evaluable)`;
+        pill.className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700";
+      } else {
+        pill.textContent = `FAIL (${accurate}/${evaluable} Evaluable)`;
+        pill.className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-950 text-rose-300 border border-rose-700";
+      }
+
+      return { accurate, evaluable, answeredCount };
+    }
+
+    function clearCurrentForm(resetUI = true) {
+      currentSelections = {};
+      document.getElementById("postureSelect").value = "";
+      document.getElementById("settingSelect").value = "";
+      document.getElementById("consensusCheckbox").checked = false;
+      document.getElementById("notesInput").value = "";
+      document.getElementById("validationWarning").classList.add("hidden");
+      if (resetUI) {
+        refreshButtonStyles();
+        recalculateComposite();
       }
     }
 
-    /* ==========================================================================
-       EXPORT CSV (TIDY RESEARCH MATRIX)
-       ========================================================================== */
+    // =========================================================================
+    // 7. SAVE, VALIDATE, GOOGLE SHEETS SYNC & NAVIGATION
+    // =========================================================================
+    async function saveAndNext() {
+      const { accurate, evaluable, answeredCount } = recalculateComposite();
+      const posture = document.getElementById("postureSelect").value;
+      const setting = document.getElementById("settingSelect").value;
+
+      if (answeredCount < 6 || !posture || !setting) {
+        document.getElementById("validationWarning").classList.remove("hidden");
+        return;
+      }
+
+      const spec = activeSpecimens[currentIndex];
+      const compositePass = evaluable === 0 ? "INDETERMINATE" : (accurate === evaluable ? "PASS" : "FAIL");
+
+      const rowObj = {
+        Timestamp: new Date().toISOString(),
+        Rater_ID: config.raterId,
+        Presentation_Seq: currentIndex + 1,
+        Specimen_ID: spec.id,
+        Filename: spec.filename,
+        Cat1_Axial: currentSelections.Cat1_Axial,
+        Cat2_JointLine: currentSelections.Cat2_JointLine,
+        Cat3_AP_Plane: currentSelections.Cat3_AP_Plane,
+        Cat4_Patellar: currentSelections.Cat4_Patellar,
+        Cat5_SkinInterface: currentSelections.Cat5_SkinInterface,
+        Cat6_Straps: currentSelections.Cat6_Straps,
+        Accurate_Count: accurate,
+        Evaluable_Count: evaluable,
+        Composite_Pass: compositePass,
+        Posture_Class: posture,
+        Setting_Class: setting,
+        Consensus_Flag: document.getElementById("consensusCheckbox").checked ? "YES" : "NO",
+        Notes: document.getElementById("notesInput").value.trim()
+      };
+
+      const recordKey = `${config.raterId}::${spec.id}`;
+      records[recordKey] = rowObj;
+      localStorage.setItem(STORAGE_KEY_RECORDS, JSON.stringify(records));
+
+      updateHeaderTelemetry();
+      populateJumpDropdown();
+      showToast(`Saved ${spec.id}`);
+
+      // Optional Real-Time Google Sheets POST
+      if (config.webhookUrl) {
+        try {
+          fetch(config.webhookUrl, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(rowObj)
+          });
+        } catch (err) {
+          console.error("Webhook sync failed:", err);
+        }
+      }
+
+      if (currentIndex < activeSpecimens.length - 1) {
+        currentIndex++;
+        renderCurrentSpecimen();
+        document.getElementById("rubricScrollContainer").scrollTop = 0;
+      } else {
+        renderCurrentSpecimen();
+        showToast("All specimens completed!");
+      }
+    }
+
+    function prevSpecimen() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        renderCurrentSpecimen();
+      }
+    }
+
+    function nextSpecimen() {
+      if (currentIndex < activeSpecimens.length - 1) {
+        currentIndex++;
+        renderCurrentSpecimen();
+      }
+    }
+
+    function jumpToSpecimen(idx) {
+      currentIndex = parseInt(idx, 10) || 0;
+      renderCurrentSpecimen();
+    }
+
+    function updateHeaderTelemetry() {
+      document.getElementById("activeRaterLabel").textContent = RATER_NAMES[config.raterId] || config.raterId;
+      document.getElementById("exportCount").textContent = Object.keys(records).length;
+    }
+
+    function showToast(msg) {
+      const banner = document.getElementById("toastBanner");
+      banner.textContent = msg;
+      banner.classList.remove("hidden");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => banner.classList.add("hidden"), 2000);
+    }
+
+    // =========================================================================
+    // 8. TIDY 18-COLUMN CSV EXPORT
+    // =========================================================================
     function exportCSV() {
-      const records = Object.values(studyState.scores);
-      if (records.length === 0) {
-        showToast("No evaluations recorded yet to export.", "warning");
+      const rows = Object.values(records);
+      if (rows.length === 0) {
+        alert("No scored specimens recorded yet.");
         return;
       }
 
       const headers = [
-        "Rater_ID",
-        "Image_ID",
-        "Blinded_ID",
-        "Timestamp_ISO",
-        "Cat1_AxialOrientation",
-        "Cat2_JointLineCenter",
-        "Cat3_APPlanePosition",
-        "Cat4_PatellarAlignment",
-        "Cat5_SkinInterface",
-        "Cat6_StrapPlacement",
-        "Total_Score",
-        "Fit_Classification",
-        "Posture_Class",
-        "Setting_Class",
-        "Confidence_Level",
-        "Flag_Consensus",
-        "Flag_Reason",
-        "Notes"
+        "Timestamp", "Rater_ID", "Presentation_Seq", "Specimen_ID", "Filename",
+        "Cat1_Axial", "Cat2_JointLine", "Cat3_AP_Plane", "Cat4_Patellar",
+        "Cat5_SkinInterface", "Cat6_Straps", "Accurate_Count", "Evaluable_Count",
+        "Composite_Pass", "Posture_Class", "Setting_Class", "Consensus_Flag", "Notes"
       ];
 
-      const rows = records.map(r => [
-        escapeCSV(r.raterId),
-        escapeCSV(r.imageId),
-        escapeCSV(r.blindedId),
-        escapeCSV(r.timestamp),
-        r.cat1_axialOrientation !== undefined ? r.cat1_axialOrientation : "",
-        r.cat2_jointLineCenter !== undefined ? r.cat2_jointLineCenter : "",
-        r.cat3_apPlanePosition !== undefined ? r.cat3_apPlanePosition : "",
-        r.cat4_patellarAlignment !== undefined ? r.cat4_patellarAlignment : "",
-        r.cat5_skinInterface !== undefined ? r.cat5_skinInterface : "",
-        r.cat6_strapPlacement !== undefined ? r.cat6_strapPlacement : "",
-        r.totalScore !== undefined ? r.totalScore : "",
-        escapeCSV(r.fitClassification),
-        escapeCSV(r.postureClass),
-        escapeCSV(r.settingClass),
-        r.confidenceLevel || "",
-        r.flagConsensus ? "TRUE" : "FALSE",
-        escapeCSV(r.flagReason || ""),
-        escapeCSV(r.notes || "")
-      ]);
+      const escapeCSV = (val) => {
+        if (val === null || val === undefined) return "";
+        const str = String(val);
+        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
 
-      const csvText = [headers.join(","), ...rows.map(row => row.join(","))].join("\r\n");
-      const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+      const csvLines = [
+        headers.join(","),
+        ...rows.map(r => headers.map(h => escapeCSV(r[h])).join(","))
+      ];
+
+      const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const safeRater = studyState.raterId.replace(/[^a-z0-9_-]/gi, '_');
+      const a = document.createElement("a");
       const dateStr = new Date().toISOString().slice(0, 10);
-      
-      link.setAttribute("href", url);
-      link.setAttribute("download", `brace_scoring_dataset_${safeRater}_${dateStr}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      a.href = url;
+      a.download = `BraceFit_Audit_${config.raterId}_${dateStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
-      showToast("Tidy CSV downloaded successfully!", "success");
     }
 
-    function escapeCSV(val) {
-      if (val === null || val === undefined) return '""';
-      const s = String(val).replace(/"/g, '""');
-      return `"${s}"`;
+    // =========================================================================
+    // 9. PAN, ZOOM & CONTRAST ENGINE
+    // =========================================================================
+    const viewport = document.getElementById("viewportContainer");
+    const transformLayer = document.getElementById("transformLayer");
+
+    function updateTransform() {
+      transformLayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+      document.getElementById("zoomReadout").textContent = `${Math.round(scale * 100)}%`;
     }
 
-    /* ==========================================================================
-       CONFIG & DATASET INGESTION MODAL
-       ========================================================================== */
+    function adjustZoom(delta) {
+      scale = Math.min(6, Math.max(0.5, +(scale + delta).toFixed(2)));
+      updateTransform();
+    }
+
+    function resetTransform() {
+      scale = 1;
+      translateX = 0;
+      translateY = 0;
+      updateTransform();
+    }
+
+    function toggleContrast() {
+      contrastEnabled = !contrastEnabled;
+      const img = document.getElementById("specimenImage");
+      const btn = document.getElementById("contrastBtn");
+      if (contrastEnabled) {
+        img.classList.add("high-contrast-filter");
+        btn.classList.add("bg-indigo-600", "text-white", "border-indigo-500");
+      } else {
+        img.classList.remove("high-contrast-filter");
+        btn.classList.remove("bg-indigo-600", "text-white", "border-indigo-500");
+      }
+    }
+
+    viewport.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.2 : -0.2;
+      adjustZoom(delta);
+    }, { passive: false });
+
+    viewport.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      isDragging = true;
+      dragStartX = e.clientX - translateX;
+      dragStartY = e.clientY - translateY;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      translateX = e.clientX - dragStartX;
+      translateY = e.clientY - dragStartY;
+      updateTransform();
+    });
+
+    window.addEventListener("mouseup", () => {
+      isDragging = false;
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener("keydown", (e) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+      if (e.key === "r" || e.key === "R") resetTransform();
+      if (e.key === "+" || e.key === "=") adjustZoom(0.25);
+      if (e.key === "-") adjustZoom(-0.25);
+      if (e.key === "p" || e.key === "P") prevSpecimen();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        saveAndNext();
+      }
+    });
+
+    // =========================================================================
+    // 10. MODALS (STUDY CONFIG & APPS SCRIPT)
+    // =========================================================================
     function openConfigModal() {
-      document.getElementById('modalRaterId').value = studyState.raterId;
-      document.getElementById('modalWebhookUrl').value = studyState.webhookUrl || "";
-      document.getElementById('configModal').classList.remove('hidden');
+      document.getElementById("raterSelect").value = config.raterId;
+      document.getElementById("orderModeSelect").value = config.orderMode;
+      document.getElementById("blindedToggle").checked = config.blinded;
+      document.getElementById("webhookUrlInput").value = config.webhookUrl || "";
+      document.getElementById("configModal").classList.remove("hidden");
     }
 
     function closeConfigModal() {
-      document.getElementById('configModal').classList.add('hidden');
+      document.getElementById("configModal").classList.add("hidden");
     }
 
-    function toggleBlindingMode() {
-      studyState.blinded = document.getElementById('blindingToggle').checked;
-      saveToStorage();
-      renderCurrentImage();
-      showToast(studyState.blinded ? "Blinding Activated: Filenames masked" : "Blinding Disabled", "info");
-    }
+    function applyConfig() {
+      config.raterId = document.getElementById("raterSelect").value;
+      config.orderMode = document.getElementById("orderModeSelect").value;
+      config.blinded = document.getElementById("blindedToggle").checked;
+      config.webhookUrl = document.getElementById("webhookUrlInput").value.trim();
 
-    let activeIngestTab = 'manifest';
-    function setIngestTab(tab) {
-      activeIngestTab = tab;
-      const btnM = document.getElementById('tabManifest');
-      const btnL = document.getElementById('tabLocal');
-      const secM = document.getElementById('ingestManifestSection');
-      const secL = document.getElementById('ingestLocalSection');
-
-      if (tab === 'manifest') {
-        btnM.className = "px-3 py-1 rounded bg-clinical-50 border border-clinical-500 text-clinical-800 font-semibold text-xs";
-        btnL.className = "px-3 py-1 rounded bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold text-xs";
-        secM.classList.remove('hidden');
-        secL.classList.add('hidden');
-      } else {
-        btnL.className = "px-3 py-1 rounded bg-clinical-50 border border-clinical-500 text-clinical-800 font-semibold text-xs";
-        btnM.className = "px-3 py-1 rounded bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold text-xs";
-        secL.classList.remove('hidden');
-        secM.classList.add('hidden');
-      }
-    }
-
-    function saveConfiguration() {
-      const rId = document.getElementById('modalRaterId').value.trim();
-      if (!rId) {
-        showToast("Rater Identifier cannot be blank", "warning");
-        return;
-      }
-
-      studyState.raterId = rId;
-      studyState.webhookUrl = document.getElementById('modalWebhookUrl').value.trim();
-      document.getElementById('displayRaterId').textContent = rId;
-
-      // Check if new dataset loaded
-      if (activeIngestTab === 'local') {
-        const fileInput = document.getElementById('localFilesInput');
-        if (fileInput.files && fileInput.files.length > 0) {
-          const files = Array.from(fileInput.files);
-          studyState.images = files.map(file => ({
-            id: file.name,
-            url: URL.createObjectURL(file)
-          }));
-          studyState.currentIndex = 0;
-          showToast(`Ingested ${files.length} local images!`, "success");
-        }
-      } else {
-        const text = document.getElementById('manifestTextarea').value.trim();
-        if (text) {
-          const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          if (lines.length > 0) {
-            studyState.images = lines.map(line => {
-              const filename = line.split('/').pop().split('?')[0] || "IMAGE.jpg";
-              return { id: filename, url: line };
-            });
-            studyState.currentIndex = 0;
-            showToast(`Loaded ${lines.length} paths into study!`, "success");
-          }
-        }
-      }
-
-      saveToStorage();
+      localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config));
+      buildOrderedSpecimens();
+      currentIndex = 0;
+      populateJumpDropdown();
+      renderCurrentSpecimen();
+      updateHeaderTelemetry();
       closeConfigModal();
-      renderCurrentImage();
+      showToast(`Active: ${RATER_NAMES[config.raterId]}`);
     }
 
-    function restoreDefaultImages() {
-      studyState.images = [...DEFAULT_SPECIMENS];
-      studyState.currentIndex = 0;
-      saveToStorage();
+    function clearStoredData() {
+      if (!confirm("Erase all locally cached ratings on this browser? Make sure you exported your CSV first.")) return;
+      records = {};
+      localStorage.removeItem(STORAGE_KEY_RECORDS);
+      updateHeaderTelemetry();
+      populateJumpDropdown();
+      renderCurrentSpecimen();
       closeConfigModal();
-      renderCurrentImage();
-      showToast("Reset to default knee brace dataset.", "info");
     }
 
-    /* ==========================================================================
-       GOOGLE APPS SCRIPT BACKEND TEMPLATE
-       ========================================================================== */
-    function populateAppsScriptTemplate() {
-      const code = `/**
- * Google Apps Script Web App for Aggregating Knee Brace Donning Evaluations
- * Paste this in Extensions > Apps Script of your Master Google Sheet
- */
-function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  
-  // Create Headers automatically on first submission
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow([
-      "Rater_ID",
-      "Image_ID",
-      "Blinded_ID",
-      "Timestamp_ISO",
-      "Cat1_AxialOrientation",
-      "Cat2_JointLineCenter",
-      "Cat3_APPlanePosition",
-      "Cat4_PatellarAlignment",
-      "Cat5_SkinInterface",
-      "Cat6_StrapPlacement",
-      "Total_Score",
-      "Fit_Classification",
-      "Posture_Class",
-      "Setting_Class",
-      "Confidence_Level",
-      "Flag_Consensus",
-      "Flag_Reason",
-      "Notes"
-    ]);
-  }
-  
-  try {
-    var data = JSON.parse(e.postData.contents);
-    sheet.appendRow([
-      data.raterId,
-      data.imageId,
-      data.blindedId,
-      data.timestamp,
-      data.cat1_axialOrientation,
-      data.cat2_jointLineCenter,
-      data.cat3_apPlanePosition,
-      data.cat4_patellarAlignment,
-      data.cat5_skinInterface,
-      data.cat6_strapPlacement,
-      data.totalScore,
-      data.fitClassification,
-      data.postureClass,
-      data.settingClass,
-      data.confidenceLevel,
-      data.flagConsensus ? "TRUE" : "FALSE",
-      data.flagReason,
-      data.notes
-    ]);
-    return ContentService.createTextOutput("SUCCESS").setMimeType(ContentService.MimeType.TEXT);
-  } catch(err) {
-    return ContentService.createTextOutput("ERROR: " + err.message).setMimeType(ContentService.MimeType.TEXT);
-  }
-}`;
-      document.getElementById('appsScriptCodeBlock').value = code;
+    function openScriptModal() {
+      document.getElementById("scriptModal").classList.remove("hidden");
     }
 
-    function openAppsScriptModal() {
-      document.getElementById('appsScriptModal').classList.remove('hidden');
+    function closeScriptModal() {
+      document.getElementById("scriptModal").classList.add("hidden");
     }
 
-    function closeAppsScriptModal() {
-      document.getElementById('appsScriptModal').classList.add('hidden');
-    }
-
-    function copyAppsScriptCode() {
-      const textarea = document.getElementById('appsScriptCodeBlock');
-      textarea.select();
-      document.execCommand('copy');
-      showToast("Apps Script code copied to clipboard!", "success");
-    }
-
-    /* ==========================================================================
-       TOAST FEEDBACK
-       ========================================================================== */
-    function showToast(message, type = "info") {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      
-      let bg = "bg-slate-900 border-slate-700 text-slate-100";
-      let icon = "info";
-      if (type === "success") {
-        bg = "bg-emerald-900/90 border-emerald-600 text-emerald-100";
-        icon = "check-circle";
-      } else if (type === "warning") {
-        bg = "bg-rose-900/90 border-rose-600 text-rose-100";
-        icon = "alert-triangle";
-      }
-
-      toast.className = `p-2.5 rounded-lg border shadow-xl text-xs font-semibold flex items-center gap-2 pointer-events-auto transform transition duration-150 ease-out translate-y-1 opacity-0 ${bg}`;
-      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 shrink-0"></i> <span>${message}</span>`;
-      container.appendChild(toast);
-      lucide.createIcons();
-
-      requestAnimationFrame(() => {
-        toast.classList.remove('translate-y-1', 'opacity-0');
+    function copyAppsScript() {
+      const code = document.getElementById("appsScriptCode").textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        showToast("Apps Script copied to clipboard");
       });
-
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-y-1');
-        setTimeout(() => toast.remove(), 200);
-      }, 3000);
     }
+
+    // Boot Application
+    window.addEventListener("DOMContentLoaded", () => {
+      loadSavedState();
+      renderRubricCards();
+      updateHeaderTelemetry();
+      autoLoadRepositoryManifest();
+    });
   </script>
 </body>
 </html>
