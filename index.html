@@ -6,7 +6,6 @@
   <title>BraceFit Audit | Multi-Rater Orthopaedic Brace Evaluation</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Custom scrollbar for dense clinical rubric */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
@@ -47,8 +46,11 @@
           <span id="sourceBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-medium">
             Initializing...
           </span>
+          <span id="cloudSyncBadge" class="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-800/80 font-medium" title="Connected to Master Google Sheet">
+            ● Sheet Sync Active
+          </span>
         </div>
-        <p class="text-[11px] text-slate-400">7-Category Anatomical Donning & Fit Protocol</p>
+        <p class="text-[11px] text-slate-400">6-Category Anatomical Alignment Rubric</p>
       </div>
     </div>
 
@@ -75,15 +77,13 @@
         <span id="activeRaterLabel">Rater_01 (Tanner)</span>
       </button>
 
-      <button onclick="openScriptModal()" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-300 transition" title="Google Sheets Real-Time Sync Setup">
+      <button onclick="openScriptModal()" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-300 transition" title="View Google Apps Script Receiver Code">
         Backend Script
       </button>
 
-      <div class="relative inline-block">
-        <button onclick="exportCSV()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow-sm transition">
-          Export CSV (<span id="exportCount">0</span>)
-        </button>
-      </div>
+      <button onclick="exportCSV()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow-sm transition">
+        Export CSV (<span id="exportCount">0</span>)
+      </button>
     </div>
   </header>
 
@@ -129,7 +129,7 @@
       </div>
     </section>
 
-    <!-- Right Panel: 7-Category Operational Scoring Rubric -->
+    <!-- Right Panel: 6-Category Operational Scoring Rubric -->
     <section class="flex-1 h-full flex flex-col bg-slate-900/40 overflow-hidden">
 
       <!-- Sticky Live Score Summary Bar -->
@@ -139,7 +139,7 @@
             <span class="text-[10px] uppercase tracking-wider text-slate-400 block">Composite Fit Score</span>
             <div class="flex items-baseline gap-1.5">
               <span id="liveAccurateCount" class="text-base font-bold text-white">0</span>
-              <span class="text-xs text-slate-400">/ <span id="liveEvaluableCount">0</span> evaluable (6 max)</span>
+              <span class="text-xs text-slate-400">/ <span id="liveEvaluableCount">0</span> evaluable (5 max)</span>
             </div>
           </div>
           <span id="compositeStatusPill" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
@@ -157,18 +157,18 @@
       <!-- Scrollable Rubric Form -->
       <div id="rubricScrollContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
 
-        <!-- Categories 1 to 6 injected cleanly by JS -->
+        <!-- Categories 1 to 5 injected cleanly by JS -->
         <div id="binaryCategoriesContainer" class="space-y-3"></div>
 
-        <!-- Category 7: Contextual Posture & Setting Metadata -->
+        <!-- Category 6: Contextual Posture & Setting Metadata -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-3">
           <div class="flex items-start justify-between gap-2">
             <div>
               <div class="flex items-center gap-2">
-                <span class="text-xs font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60">Cat 7</span>
+                <span class="text-xs font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60">Cat 6</span>
                 <h3 class="text-sm font-semibold text-white">Contextual Posture & Setting</h3>
               </div>
-              <p class="text-xs text-slate-400 mt-1">Categorical subgroup metadata (does not penalize composite accuracy score unless clinically contradictory).</p>
+              <p class="text-xs text-slate-400 mt-1">Classified categorically (does not penalize overall accuracy score unless clinically contradictory).</p>
             </div>
             <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Metadata</span>
           </div>
@@ -181,7 +181,7 @@
                 <option value="Seated_Flexed_30_90">Seated with knee flexed 30°–90° (standard donning)</option>
                 <option value="Seated_Extended">Seated fully extended</option>
                 <option value="Standing_WeightBearing">Standing weight-bearing</option>
-                <option value="Active_Locomotion">Active locomotion (running, cutting, jumping)</option>
+                <option value="Active_Locomotion">Active locomotion (running, cutting)</option>
                 <option value="Indeterminate_Cropped">Indeterminate / Tightly cropped</option>
               </select>
             </div>
@@ -216,7 +216,7 @@
       <!-- Sticky Bottom Action Footer -->
       <div class="bg-slate-900 border-t border-slate-800 px-4 py-3 flex items-center justify-between gap-3 shrink-0">
         <div id="validationWarning" class="text-xs text-rose-400 font-medium hidden">
-          Complete Categories 1–6 and Posture/Setting before saving.
+          Complete Categories 1–5 and Posture/Setting before saving.
         </div>
         <div class="flex items-center gap-2 ml-auto">
           <button onclick="clearCurrentForm()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition">
@@ -281,9 +281,9 @@
 
         <!-- Google Apps Script Webhook URL -->
         <div>
-          <label class="block text-xs font-semibold text-slate-200 mb-1">Google Sheets Apps Script Web App URL (Optional)</label>
-          <input id="webhookUrlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
-          <p class="text-[11px] text-slate-400 mt-1">When provided, every saved rating automatically appends a row to your shared master Google Sheet.</p>
+          <label class="block text-xs font-semibold text-slate-200 mb-1">Google Sheets Apps Script Web App URL</label>
+          <input id="webhookUrlInput" type="url" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+          <p class="text-[11px] text-emerald-400 mt-1">Pre-configured to stream all ratings directly into your master Google Sheet.</p>
         </div>
       </div>
 
@@ -305,7 +305,7 @@
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
           <h2 class="text-base font-bold text-white">Google Sheets Real-Time Aggregation Script</h2>
-          <p class="text-xs text-slate-400">Paste into Extensions → Apps Script in a blank Google Sheet, deploy as Web App (Anyone access).</p>
+          <p class="text-xs text-slate-400">Ensure your Google Apps Script matches these exact 17 column headers.</p>
         </div>
         <button onclick="closeScriptModal()" class="text-slate-400 hover:text-white text-lg font-bold px-2">×</button>
       </div>
@@ -314,8 +314,8 @@
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var headers = [
     "Timestamp", "Rater_ID", "Presentation_Seq", "Specimen_ID", "Filename",
-    "Cat1_Axial", "Cat2_JointLine", "Cat3_AP_Plane", "Cat4_Patellar",
-    "Cat5_SkinInterface", "Cat6_Straps", "Accurate_Count", "Evaluable_Count",
+    "Cat1_Axial", "Cat2_JointLine", "Cat3_AP_Plane",
+    "Cat4_SkinInterface", "Cat5_Straps", "Accurate_Count", "Evaluable_Count",
     "Composite_Pass", "Posture_Class", "Setting_Class", "Consensus_Flag", "Notes"
   ];
   if (sheet.getLastRow() === 0) {
@@ -337,61 +337,52 @@
 
   <script>
     // =========================================================================
-    // 1. OPERATIONAL RUBRIC DEFINITIONS (CATEGORIES 1 - 6)
+    // 1. UPDATED OPERATIONAL RUBRIC DEFINITIONS (CATEGORIES 1 - 5)
     // =========================================================================
     const RUBRIC_CATEGORIES = [
       {
         id: "Cat1_Axial",
         num: "Cat 1",
         title: "Vertical / Axial Orientation",
-        definition: "Structural frame donned right-side up relative to proximal thigh and distal calf geometry.",
-        b1: "Wider thigh cuff proximal; narrower calf cuff distal; ROM hinge stops oriented per design.",
-        b0: "Upside down (calf shell on thigh or condyle hinges over tibial shaft).",
-        b9: "Extreme zoom showing only hinge center, obscuring upper and lower cuffs."
+        definition: "The structural frame is donned right-side up relative to proximal and distal limb geometry.",
+        b1: "Wider thigh frame/cuffs are proximal; narrower calf frame/cuffs are distal; hinge range-of-motion stops/pins oriented per manufacturer design.",
+        b0: "Completely upside down (e.g., calf shell positioned over the anterior/posterior thigh, or condyle hinges situated over the tibial shaft).",
+        b9: "Extreme zoom-in showing only the hinge center, obscuring the upper and lower cuffs."
       },
       {
         id: "Cat2_JointLine",
         num: "Cat 2",
         title: "Joint Line / Epicondylar Center",
-        definition: "Mechanical hinge axis mirrors the tibiofemoral flexion-extension axis (lateral femoral epicondyle).",
-        b1: "Hinge center within condylar zone: superior patellar border to tibial tubercle (≤1.5–2.0 cm of joint line).",
-        b0: "Gross vertical migration: hinge proximal to superior patella (mid-femur) or distal to tibial tuberosity.",
-        b9: "Hinge covered by clothing, extreme frontal view hiding axis, or leg cropped at knee."
+        definition: "The center axis of the mechanical hinge mirrors the tibiofemoral flexion-extension axis (lateral femoral epicondyle / joint line).",
+        b1: "Hinge center falls within the condylar zone: bounded proximally by the superior border of the patella and distally by the tibial tubercle (i.e., within approximately one condyle pad diameter or ≤1.5–2.0 cm of the lateral femoral epicondyle/joint line).",
+        b0: "Gross vertical migration. Hinge center lies proximal to the superior pole of the patella (riding on mid-femur) or distal to the tibial tuberosity (riding on tibia).",
+        b9: "Hinge covered by clothing, extreme frontal view hiding the hinge axis, or leg cropped at the knee joint."
       },
       {
         id: "Cat3_AP_Plane",
         num: "Cat 3",
         title: "Anteroposterior Plane Position",
-        definition: "Rigid or semi-rigid longitudinal upright struts parallel the mechanical axis in the mid-coronal plane.",
-        b1: "Uprights align with mid-lateral/medial line dividing anterior and posterior halves evenly (deviation ≤15°).",
-        b0: "Severe rotational malalignment: uprights rotated anteriorly over patella/quad or posteriorly into popliteal fossa (>15°).",
-        b9: "Pure AP (direct anterior) or posterior camera angle where coronal depth of lateral strut cannot be judged."
+        definition: "The rigid or semi-rigid longitudinal upright struts parallel the mechanical axis in the mid-coronal plane.",
+        b1: "Upright bars align with the mid-lateral and mid-medial line of the leg (dividing the anterior and posterior halves of the thigh and shank evenly; angle deviation ≤15° from coronal mid-axis).",
+        b0: "Severe rotational malalignment. Uprights are visibly rotated anteriorly over the quadriceps tendon/patella or posteriorly into the popliteal fossa (>15° rotation).",
+        b9: "Pure AP (direct anterior) or pure posterior camera angle where depth and coronal positioning of the lateral strut cannot be judged."
       },
       {
-        id: "Cat4_Patellar",
+        id: "Cat4_SkinInterface",
         num: "Cat 4",
-        title: "Patellar Alignment & Window",
-        definition: "For anterior cutouts/buttresses, patella is seated within aperture; for open frames, arch clears superiorly.",
-        b1: "Patella centered within cutout ring (≤1/3 patellar width overlapping material) or arch clears superiorly without compression.",
-        b0: "Cutout rests over quad tendon (too high) or tibial tuberosity (too low), or patella displaced under solid neoprene.",
-        b9: "Pure lateral profile where patellar centering cannot be seen, or brace style lacks anterior reference window."
-      },
-      {
-        id: "Cat5_SkinInterface",
-        num: "Cat 5",
         title: "Skin Interface vs. Layering",
-        definition: "Brace worn directly against skin or over approved, non-shearing thin base layers.",
-        b1: "Bare skin, under athletic shorts, or over single thin smooth base layer (compression tight/undersleeve) without bunching.",
-        b0: "Donned over loose, thick, or wrinkled outerwear (denim jeans, cargo pants, bulky sweatpants, or multiple layers).",
-        b9: "Frame-tight crop making it impossible to distinguish thick garment from thin compression tight."
+        definition: "The brace is worn directly against the body or over approved, non-shearing base layers to avoid migration and hoop-stress loss.",
+        b1: "Worn on bare skin, under an athletic short, or over a single thin, smooth base layer (e.g., seamless athletic compression tight or medical cotton undersleeve) with no bunching.",
+        b0: "Donned over loose, thick, or wrinkled outerwear (e.g., denim jeans, cargo pants, bulky fleece sweatpants, or multiple layered garments).",
+        b9: "Frame-tight crop making it impossible to determine if the limb covering is a thick garment or thin compression tight."
       },
       {
-        id: "Cat6_Straps",
-        num: "Cat 6",
+        id: "Cat5_Straps",
+        num: "Cat 5",
         title: "Strap Placement & Fastening",
-        definition: "All hook-and-loop straps engaged, tensioned, and routed in correct anatomical direction without slack.",
-        b1: "Straps lie flush against cuffs/limb; Velcro ends fastened in landing zones; no loose loops or severe slack.",
-        b0: "Dangling/unfastened straps, twisted along long axis, routed through wrong anchor loops, or gap >1 cm.",
+        definition: "All hook-and-loop straps are engaged, tensioned, and routed in the correct anatomical direction without mechanical slack.",
+        b1: "Straps lie completely flush against the cuffs/limb contours; all Velcro ends are fastened within their landing zones; no loose loops or severe slack visible.",
+        b0: "Dangling or unfastened straps; straps twisted along their long axis; straps bypassed or buckled backward into wrong anchor loops; visible gap between strap and limb >1 cm.",
         b9: "Straps obscured from view (e.g., viewing only the non-strap side of the brace)."
       }
     ];
@@ -403,20 +394,13 @@
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="720" viewBox="0 0 600 720">
         <rect width="600" height="720" fill="#0f172a"/>
         <rect x="20" y="20" width="560" height="680" rx="16" fill="#1e293b" stroke="#334155" stroke-width="2"/>
-        <!-- Thigh & Calf Silhouette -->
         <path d="M220,110 L380,110 L355,340 L345,610 L255,610 L245,340 Z" fill="#334155" opacity="0.6"/>
-        <!-- Upper Thigh Cuff -->
         <rect x="205" y="165" width="190" height="58" rx="10" fill="${colorHex}" opacity="0.85"/>
-        <!-- Lower Calf Cuff -->
         <rect x="225" y="475" width="150" height="54" rx="10" fill="${colorHex}" opacity="0.85"/>
-        <!-- Lateral & Medial Uprights -->
         <rect x="212" y="185" width="14" height="320" rx="6" fill="#94a3b8"/>
         <rect x="374" y="185" width="14" height="320" rx="6" fill="#94a3b8"/>
-        <!-- Condylar Hinge Center -->
         <circle cx="219" cy="350" r="22" fill="#0f172a" stroke="#f8fafc" stroke-width="4"/>
         <circle cx="381" cy="350" r="22" fill="#0f172a" stroke="#f8fafc" stroke-width="4"/>
-        <!-- Patellar Cutout Ring -->
-        <circle cx="300" cy="345" r="36" fill="none" stroke="#e2e8f0" stroke-width="6" stroke-dasharray="10 6"/>
         <text x="300" y="65" fill="#f8fafc" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">${title}</text>
         <text x="300" y="92" fill="#94a3b8" font-family="sans-serif" font-size="13" text-anchor="middle">${subtitle}</text>
         <text x="300" y="665" fill="#64748b" font-family="monospace" font-size="12" text-anchor="middle">DEMO BENCHMARK SVG • ADD manifest.json TO LOAD REPO IMAGES</text>
@@ -425,16 +409,17 @@
     }
 
     const FALLBACK_SPECIMENS = [
-      { id: "DEMO_0001", filename: "demo_proper_hinged_acl.svg", url: createFallbackSVG("DEMO 01: Standard Hinged Knee Brace", "Aligned epicondylar hinge & patellar cutout", "#4f46e5") },
-      { id: "DEMO_0002", filename: "demo_distal_migration.svg", url: createFallbackSVG("DEMO 02: Inferior Migration Benchmark", "Verify Cat 2 joint line & Cat 4 patellar alignment", "#0ea5e9") },
+      { id: "DEMO_0001", filename: "demo_proper_hinged_acl.svg", url: createFallbackSVG("DEMO 01: Standard Hinged Knee Brace", "Aligned epicondylar hinge & mid-coronal struts", "#4f46e5") },
+      { id: "DEMO_0002", filename: "demo_distal_migration.svg", url: createFallbackSVG("DEMO 02: Inferior Migration Benchmark", "Verify Cat 2 joint line & Cat 4 skin layering", "#0ea5e9") },
       { id: "DEMO_0003", filename: "demo_strap_slack_case.svg", url: createFallbackSVG("DEMO 03: Lateral Profile Inspection", "Test zoom/pan & indeterminate boundary rules", "#10b981") }
     ];
 
     // =========================================================================
-    // 3. APPLICATION STATE & STORAGE KEYS
+    // 3. APPLICATION STATE & DEFAULT GOOGLE APPS SCRIPT ENDPOINT
     // =========================================================================
-    const STORAGE_KEY_RECORDS = "bracefit_records_v2";
-    const STORAGE_KEY_CONFIG = "bracefit_config_v2";
+    const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwT-FlK7L6hJhqhTlERuVGq-gIBKmCkOJbQRwe06GnIK98TgOPFDgvRbS6WD4IgzF6W/exec";
+    const STORAGE_KEY_RECORDS = "bracefit_records_v3";
+    const STORAGE_KEY_CONFIG = "bracefit_config_v3";
 
     const RATER_NAMES = {
       "Rater_01": "Rater_01 (Tanner)",
@@ -444,16 +429,16 @@
 
     let config = {
       raterId: "Rater_01",
-      orderMode: "sequential", // "sequential" | "randomized"
+      orderMode: "sequential",
       blinded: true,
-      webhookUrl: ""
+      webhookUrl: DEFAULT_WEBHOOK_URL
     };
 
     let baseSpecimens = [...FALLBACK_SPECIMENS];
     let activeSpecimens = [...FALLBACK_SPECIMENS];
     let currentIndex = 0;
-    let records = {}; // Keyed by `${raterId}::${specimenId}`
-    let currentSelections = {}; // { Cat1_Axial: 1 | 0 | 9, ... }
+    let records = {};
+    let currentSelections = {};
 
     // Pan & Zoom State
     let scale = 1;
@@ -507,6 +492,7 @@
         if (savedCfg) {
           config = { ...config, ...JSON.parse(savedCfg) };
           if (!RATER_NAMES[config.raterId]) config.raterId = "Rater_01";
+          if (!config.webhookUrl) config.webhookUrl = DEFAULT_WEBHOOK_URL;
         }
         const savedRecs = localStorage.getItem(STORAGE_KEY_RECORDS);
         if (savedRecs) {
@@ -646,7 +632,6 @@
       const imgEl = document.getElementById("specimenImage");
       imgEl.src = spec.url;
 
-      // Update header labels
       document.getElementById("specimenTitle").textContent = config.blinded
         ? `${spec.id} (Blinded)`
         : `${spec.id} — ${spec.filename}`;
@@ -657,7 +642,6 @@
       document.getElementById("specimenJumpSelect").value = String(currentIndex);
       resetTransform();
 
-      // Load existing record for this rater + specimen if already scored
       const recordKey = `${config.raterId}::${spec.id}`;
       const existing = records[recordKey];
       const scoredBadge = document.getElementById("scoredBadge");
@@ -729,8 +713,8 @@
       document.getElementById("liveEvaluableCount").textContent = evaluable;
 
       const pill = document.getElementById("compositeStatusPill");
-      if (answeredCount < 6) {
-        pill.textContent = `Incomplete (${answeredCount}/6)`;
+      if (answeredCount < 5) {
+        pill.textContent = `Incomplete (${answeredCount}/5)`;
         pill.className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700";
       } else if (evaluable === 0) {
         pill.textContent = "All Indeterminate (9)";
@@ -767,7 +751,7 @@
       const posture = document.getElementById("postureSelect").value;
       const setting = document.getElementById("settingSelect").value;
 
-      if (answeredCount < 6 || !posture || !setting) {
+      if (answeredCount < 5 || !posture || !setting) {
         document.getElementById("validationWarning").classList.remove("hidden");
         return;
       }
@@ -784,9 +768,8 @@
         Cat1_Axial: currentSelections.Cat1_Axial,
         Cat2_JointLine: currentSelections.Cat2_JointLine,
         Cat3_AP_Plane: currentSelections.Cat3_AP_Plane,
-        Cat4_Patellar: currentSelections.Cat4_Patellar,
-        Cat5_SkinInterface: currentSelections.Cat5_SkinInterface,
-        Cat6_Straps: currentSelections.Cat6_Straps,
+        Cat4_SkinInterface: currentSelections.Cat4_SkinInterface,
+        Cat5_Straps: currentSelections.Cat5_Straps,
         Accurate_Count: accurate,
         Evaluable_Count: evaluable,
         Composite_Pass: compositePass,
@@ -802,20 +785,23 @@
 
       updateHeaderTelemetry();
       populateJumpDropdown();
-      showToast(`Saved ${spec.id}`);
 
-      // Optional Real-Time Google Sheets POST
+      // Stream row to Master Google Sheet
       if (config.webhookUrl) {
         try {
           fetch(config.webhookUrl, {
             method: "POST",
             mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(rowObj)
           });
+          showToast(`Saved & synced ${spec.id} to Google Sheet ✓`);
         } catch (err) {
           console.error("Webhook sync failed:", err);
+          showToast(`Saved ${spec.id} locally (sync retry needed)`);
         }
+      } else {
+        showToast(`Saved ${spec.id} locally`);
       }
 
       if (currentIndex < activeSpecimens.length - 1) {
@@ -824,7 +810,7 @@
         document.getElementById("rubricScrollContainer").scrollTop = 0;
       } else {
         renderCurrentSpecimen();
-        showToast("All specimens completed!");
+        showToast("All specimens completed & synced!");
       }
     }
 
@@ -850,6 +836,15 @@
     function updateHeaderTelemetry() {
       document.getElementById("activeRaterLabel").textContent = RATER_NAMES[config.raterId] || config.raterId;
       document.getElementById("exportCount").textContent = Object.keys(records).length;
+
+      const syncBadge = document.getElementById("cloudSyncBadge");
+      if (config.webhookUrl) {
+        syncBadge.textContent = "● Sheet Sync Active";
+        syncBadge.className = "hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-800/80 font-medium";
+      } else {
+        syncBadge.textContent = "○ Local Only";
+        syncBadge.className = "hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-medium";
+      }
     }
 
     function showToast(msg) {
@@ -857,23 +852,23 @@
       banner.textContent = msg;
       banner.classList.remove("hidden");
       clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => banner.classList.add("hidden"), 2000);
+      window._toastTimer = setTimeout(() => banner.classList.add("hidden"), 2200);
     }
 
     // =========================================================================
-    // 8. TIDY 18-COLUMN CSV EXPORT
+    // 8. TIDY 17-COLUMN CSV EXPORT (BACKUP)
     // =========================================================================
     function exportCSV() {
       const rows = Object.values(records);
       if (rows.length === 0) {
-        alert("No scored specimens recorded yet.");
+        alert("No scored specimens recorded locally yet.");
         return;
       }
 
       const headers = [
         "Timestamp", "Rater_ID", "Presentation_Seq", "Specimen_ID", "Filename",
-        "Cat1_Axial", "Cat2_JointLine", "Cat3_AP_Plane", "Cat4_Patellar",
-        "Cat5_SkinInterface", "Cat6_Straps", "Accurate_Count", "Evaluable_Count",
+        "Cat1_Axial", "Cat2_JointLine", "Cat3_AP_Plane",
+        "Cat4_SkinInterface", "Cat5_Straps", "Accurate_Count", "Evaluable_Count",
         "Composite_Pass", "Posture_Class", "Setting_Class", "Consensus_Flag", "Notes"
       ];
 
@@ -963,7 +958,6 @@
       isDragging = false;
     });
 
-    // Keyboard Shortcuts
     window.addEventListener("keydown", (e) => {
       if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
       if (e.key === "r" || e.key === "R") resetTransform();
@@ -983,7 +977,7 @@
       document.getElementById("raterSelect").value = config.raterId;
       document.getElementById("orderModeSelect").value = config.orderMode;
       document.getElementById("blindedToggle").checked = config.blinded;
-      document.getElementById("webhookUrlInput").value = config.webhookUrl || "";
+      document.getElementById("webhookUrlInput").value = config.webhookUrl || DEFAULT_WEBHOOK_URL;
       document.getElementById("configModal").classList.remove("hidden");
     }
 
@@ -995,7 +989,7 @@
       config.raterId = document.getElementById("raterSelect").value;
       config.orderMode = document.getElementById("orderModeSelect").value;
       config.blinded = document.getElementById("blindedToggle").checked;
-      config.webhookUrl = document.getElementById("webhookUrlInput").value.trim();
+      config.webhookUrl = document.getElementById("webhookUrlInput").value.trim() || DEFAULT_WEBHOOK_URL;
 
       localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config));
       buildOrderedSpecimens();
@@ -1008,7 +1002,7 @@
     }
 
     function clearStoredData() {
-      if (!confirm("Erase all locally cached ratings on this browser? Make sure you exported your CSV first.")) return;
+      if (!confirm("Erase all locally cached ratings on this browser? Your already-synced Google Sheet rows will not be affected.")) return;
       records = {};
       localStorage.removeItem(STORAGE_KEY_RECORDS);
       updateHeaderTelemetry();
